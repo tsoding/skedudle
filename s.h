@@ -5,8 +5,18 @@
 
 typedef struct  {
     uint64_t len;
-    char *data;
+    const char *data;
 } String;
+
+static inline
+String string_null(const char *s)
+{
+    String result = {
+        .len = strlen(s),
+        .data = s
+    };
+    return result;
+}
 
 static inline
 String chop_line(String *input)
@@ -69,5 +79,10 @@ String chop_word(String *input)
     return word;
 }
 
+int string_equal(String a, String b)
+{
+    if (a.len != b.len) return 0;
+    return memcmp(a.data, b.data, a.len) == 0;
+}
 
 #endif  // S_H_

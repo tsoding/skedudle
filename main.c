@@ -1,3 +1,4 @@
+#define _GNU_SOURCE
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -33,11 +34,29 @@ char response[] =
 char request_buffer[REQUEST_BUFFER_CAPACITY];
 jmp_buf handle_request_error;
 
+void write_response(int fd, int code)
+{
+    // TODO: not standard
+    dprintf(
+        fd,
+        "HTTP/1.1 %d OMEGALUL\n"
+        "Content-Type: text/html\n"
+        "\n"
+        "<html>"
+          "<head>"
+            "<title>Error code %d</title>"
+          "</head>"
+          "<body>"
+             "<h1>Error code %d</h1>"
+          "</body>"
+        "</html>",
+        code, code, code);
+}
+
 int http_error(int code, const char *message)
 {
-    (void) code;
     fprintf(stderr, "%s\n", message);
-    longjmp(handle_request_error, 1);
+    longjmp(handle_request_error, code);
 }
 
 void handle_request(int fd)
@@ -56,6 +75,16 @@ void handle_request(int fd)
 
     if (!line.len) {
         http_error(400, "Empty status line");
+    }
+
+    String method = chop_word(&line);
+    if (!string_equal(method, string_null("GET"))) {
+        http_error(405, "Unknown method");
+    }
+
+    String path = chop_word(&line);
+    if (!string_equal(path, string_null("/"))) {
+        http_error(404, "Unknown path");
     }
 }
 
@@ -112,15 +141,18 @@ int main(int argc, char *argv[])
 
         assert(client_addrlen == sizeof(client_addr));
 
-        if (setjmp(handle_request_error) == 0) {
+        int code = setjmp(handle_request_error);
+        if (code == 0) {
             handle_request(client_fd);
+            err = write(client_fd, response, sizeof(response));
+            if (err < 0) {
+                fprintf(stderr, "Could not send data: %s\n", strerror(errno));
+            }
+        } else {
+            write_response(client_fd, code);
         }
         printf("------------------------------\n");
 
-        err = write(client_fd, response, sizeof(response));
-        if (err < 0) {
-            fprintf(stderr, "Could not send data: %s\n", strerror(errno));
-        }
 
         err = close(client_fd);
         if (err < 0) {
