@@ -1,4 +1,4 @@
-CFLAGS=-Wall -Wextra -Werror -Wconversion -Wunused-macros -pedantic -std=c11
+CFLAGS=-Wall -Wextra -Werror -Wconversion -pedantic -std=c11
 LIBS=
 
 nodec: main.c

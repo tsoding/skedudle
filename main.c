@@ -3,11 +3,14 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#include <setjmp.h>
 
 #include <netinet/in.h>
 #include <sys/types.h>          /* See NOTES */
 #include <sys/socket.h>
 #include <unistd.h>
+
+#include "s.h"
 
 char response[] =
     "HTTP/1.1 200 OK\n"
@@ -21,6 +24,40 @@ char response[] =
         "<h1>PHP is the BEST!!1</h1>"
       "</body>"
     "</html>";
+
+#define KILO 1024
+#define MEGA (1024 * KILO)
+#define GIGA (1024 * MEGA)
+
+#define REQUEST_BUFFER_CAPACITY (640 * MEGA)
+char request_buffer[REQUEST_BUFFER_CAPACITY];
+jmp_buf handle_request_error;
+
+int http_error(int code, const char *message)
+{
+    (void) code;
+    fprintf(stderr, "%s\n", message);
+    longjmp(handle_request_error, 1);
+}
+
+void handle_request(int fd)
+{
+    ssize_t request_buffer_size = read(fd, request_buffer, REQUEST_BUFFER_CAPACITY);
+
+    if (request_buffer_size == 0) http_error(400, "EOF");
+    if (request_buffer_size < 0)  http_error(500, strerror(errno));
+
+    String buffer = {
+        .len = (uint64_t)request_buffer_size,
+        .data = request_buffer
+    };
+
+    String line = trim_end(chop_line(&buffer));
+
+    if (!line.len) {
+        http_error(400, "Empty status line");
+    }
+}
 
 int main(int argc, char *argv[])
 {
@@ -49,6 +86,7 @@ int main(int argc, char *argv[])
 
     struct sockaddr_in server_addr;
     memset(&server_addr, 0, sizeof(server_addr));
+    server_addr.sin_family = AF_INET;
     server_addr.sin_port = htons(port);
 
     ssize_t err = bind(server_fd, (struct sockaddr*) &server_addr, sizeof(server_addr));
@@ -73,6 +111,11 @@ int main(int argc, char *argv[])
         }
 
         assert(client_addrlen == sizeof(client_addr));
+
+        if (setjmp(handle_request_error) == 0) {
+            handle_request(client_fd);
+        }
+        printf("------------------------------\n");
 
         err = write(client_fd, response, sizeof(response));
         if (err < 0) {
