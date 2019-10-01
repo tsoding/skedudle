@@ -7,25 +7,16 @@
 #include <setjmp.h>
 #include <stdarg.h>
 
+#include <arpa/inet.h>
+#include <fcntl.h>
 #include <netinet/in.h>
-#include <sys/types.h>          /* See NOTES */
+#include <sys/sendfile.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 #include <unistd.h>
 
 #include "s.h"
-
-char response[] =
-    "HTTP/1.1 200 OK\n"
-    "Content-Type: text/html\n"
-    "\n"
-    "<html>"
-      "<head>"
-        "<title>PHP is the BEST!!1</title>"
-      "</head>"
-      "<body>"
-        "<h1>PHP is the BEST!!1</h1>"
-      "</body>"
-    "</html>";
 
 #define KILO 1024
 #define MEGA (1024 * KILO)
@@ -33,7 +24,7 @@ char response[] =
 
 #define REQUEST_BUFFER_CAPACITY (640 * MEGA)
 char request_buffer[REQUEST_BUFFER_CAPACITY];
-jmp_buf handle_request_error;
+jmp_buf handle_request_return;
 
 void write_error_response(int fd, int code)
 {
@@ -54,22 +45,88 @@ void write_error_response(int fd, int code)
         code, code, code);
 }
 
-int http_error(int code, const char *format, ...)
+int http_error(int fd, int code, const char *format, ...)
 {
     va_list args;
     va_start(args, format);
     vfprintf(stderr, format, args);
     va_end(args);
 
-    longjmp(handle_request_error, code);
+    write_error_response(fd, code);
+    longjmp(handle_request_return, 1);
 }
 
-void handle_request(int fd)
+void response_status_line(int fd, int code)
 {
+    dprintf(fd, "HTTP/1.1 %d\n", code);
+}
+
+void response_header(int fd, const char *name, const char *value_format, ...)
+{
+    va_list args;
+    va_start(args, value_format);
+
+    dprintf(fd, "%s: ", name);
+    vdprintf(fd, value_format, args);
+    dprintf(fd, "\n");
+
+    va_end(args);
+}
+
+void response_body_start(int fd)
+{
+    dprintf(fd, "\n");
+}
+
+void serve_file(int dest_fd,
+                const char *filepath,
+                const char *content_type)
+{
+    int src_fd = -1;
+
+    struct stat file_stat;
+    int err = stat(filepath, &file_stat);
+    if (err < 0) {
+        http_error(dest_fd, 404, strerror(errno));
+    }
+
+    src_fd = open(filepath, O_RDONLY);
+    if (src_fd < 0) {
+        http_error(dest_fd, 404, strerror(errno));
+    }
+
+    response_status_line(dest_fd, 200);
+    response_header(dest_fd, "Content-Type", content_type);
+    response_header(dest_fd, "Content-Length", "%d", file_stat.st_size);
+    response_body_start(dest_fd);
+
+    off_t offset = 0;
+    while (offset < file_stat.st_size) {
+        // TODO: align sendfile chunks according to tcp mem buffer
+        //     - http://man7.org/linux/man-pages/man2/sysctl.2.html
+        //     - `sysctl -w net.ipv4.tcp_mem='8388608 8388608 8388608'`
+        ssize_t n = sendfile(dest_fd, src_fd, &offset, 1024);
+        if (n < 0) {
+            fprintf(stderr, "[ERROR] Could not finish serving the file\n");
+            break;
+        }
+    }
+
+    if (src_fd >= 0) {
+        close(src_fd);
+    }
+
+    longjmp(handle_request_return, 1);
+}
+
+void handle_request(int fd, struct sockaddr_in *addr)
+{
+    assert(addr);
+
     ssize_t request_buffer_size = read(fd, request_buffer, REQUEST_BUFFER_CAPACITY);
 
-    if (request_buffer_size == 0) http_error(400, "EOF");
-    if (request_buffer_size < 0)  http_error(500, strerror(errno));
+    if (request_buffer_size == 0) http_error(fd, 400, "EOF");
+    if (request_buffer_size < 0)  http_error(fd, 500, strerror(errno));
 
     String buffer = {
         .len = (uint64_t)request_buffer_size,
@@ -79,23 +136,30 @@ void handle_request(int fd)
     String line = trim_end(chop_line(&buffer));
 
     if (!line.len) {
-        http_error(400, "Empty status line\n");
+        http_error(fd, 400, "Empty status line\n");
     }
 
     String method = chop_word(&line);
     if (!string_equal(method, string_null("GET"))) {
-        http_error(405, "Unknown method\n");
+        http_error(fd, 405, "Unknown method\n");
     }
 
     String path = chop_word(&line);
-    if (!string_equal(path, string_null("/"))) {
-        http_error(404, "Unknown path\n");
+    printf("[%.*s] %.*s\n",
+           (int) method.len, method.data,
+           (int) path.len, path.data);
+
+    if (string_equal(path, string_null("/"))) {
+        serve_file(fd, "./index.html", "text/html");
     }
 
-    ssize_t err = write(fd, response, sizeof(response));
-    if (err < 0) {
-        http_error(500, "Could not send data: %s\n", strerror(errno));
+    if (string_equal(path, string_null("/favicon.png"))) {
+        serve_file(fd, "./favicon.png", "image/png");
     }
+
+    http_error(fd, 404, "Unknown path\n");
+
+    // TODO: what if no request terminating function was ever called
 }
 
 int main(int argc, char *argv[])
@@ -151,14 +215,9 @@ int main(int argc, char *argv[])
 
         assert(client_addrlen == sizeof(client_addr));
 
-        int code = setjmp(handle_request_error);
-        if (code == 0) {
-            handle_request(client_fd);
-        } else {
-            write_error_response(client_fd, code);
+        if (setjmp(handle_request_return) == 0) {
+            handle_request(client_fd, &client_addr);
         }
-        printf("------------------------------\n");
-
 
         err = close(client_fd);
         if (err < 0) {
