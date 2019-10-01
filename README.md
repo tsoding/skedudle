@@ -1,4 +1,4 @@
-# HTTP Server in C
+# Web Framework in C
 
 ## Quick Start
 
