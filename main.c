@@ -5,6 +5,7 @@
 #include <string.h>
 #include <errno.h>
 #include <setjmp.h>
+#include <stdarg.h>
 
 #include <netinet/in.h>
 #include <sys/types.h>          /* See NOTES */
@@ -34,7 +35,7 @@ char response[] =
 char request_buffer[REQUEST_BUFFER_CAPACITY];
 jmp_buf handle_request_error;
 
-void write_response(int fd, int code)
+void write_error_response(int fd, int code)
 {
     // TODO: not standard
     dprintf(
@@ -53,9 +54,13 @@ void write_response(int fd, int code)
         code, code, code);
 }
 
-int http_error(int code, const char *message)
+int http_error(int code, const char *format, ...)
 {
-    fprintf(stderr, "%s\n", message);
+    va_list args;
+    va_start(args, format);
+    vfprintf(stderr, format, args);
+    va_end(args);
+
     longjmp(handle_request_error, code);
 }
 
@@ -74,17 +79,22 @@ void handle_request(int fd)
     String line = trim_end(chop_line(&buffer));
 
     if (!line.len) {
-        http_error(400, "Empty status line");
+        http_error(400, "Empty status line\n");
     }
 
     String method = chop_word(&line);
     if (!string_equal(method, string_null("GET"))) {
-        http_error(405, "Unknown method");
+        http_error(405, "Unknown method\n");
     }
 
     String path = chop_word(&line);
     if (!string_equal(path, string_null("/"))) {
-        http_error(404, "Unknown path");
+        http_error(404, "Unknown path\n");
+    }
+
+    ssize_t err = write(fd, response, sizeof(response));
+    if (err < 0) {
+        http_error(500, "Could not send data: %s\n", strerror(errno));
     }
 }
 
@@ -144,12 +154,8 @@ int main(int argc, char *argv[])
         int code = setjmp(handle_request_error);
         if (code == 0) {
             handle_request(client_fd);
-            err = write(client_fd, response, sizeof(response));
-            if (err < 0) {
-                fprintf(stderr, "Could not send data: %s\n", strerror(errno));
-            }
         } else {
-            write_response(client_fd, code);
+            write_error_response(client_fd, code);
         }
         printf("------------------------------\n");
 
