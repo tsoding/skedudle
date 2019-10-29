@@ -8,8 +8,9 @@ typedef struct  {
     const char *data;
 } String;
 
+// Construct String from NULL-terminated C string
 static inline
-String string_null(const char *s)
+String string_nt(const char *s)
 {
     String result = {
         .len = strlen(s),
