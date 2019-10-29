@@ -20,12 +20,21 @@ String string_nt(const char *s)
 }
 
 static inline
+String string_empty(void)
+{
+    String result = {
+        .len = 0,
+        .data = NULL
+    };
+    return result;
+}
+
+static inline
 String chop_line(String *input)
 {
     // TODO: is this guard even needed?
     if (input->len == 0) {
-        String result = { .data = NULL, .len = 0 };
-        return result;
+        return string_empty();
     }
 
     uint64_t i = 0;
@@ -71,8 +80,7 @@ String chop_word(String *input)
 {
     // TODO: is this guard even needed?
     if (input->len == 0) {
-        String result = { .data = NULL, .len = 0 };
-        return result;
+        return string_empty();
     }
 
     *input = trim_begin(*input);
