@@ -21,6 +21,12 @@ String string_null(const char *s)
 static inline
 String chop_line(String *input)
 {
+    // TODO: is this guard even needed?
+    if (input->len == 0) {
+        String result = { .data = NULL, .len = 0 };
+        return result;
+    }
+
     uint64_t i = 0;
     while (i < input->len && input->data[i] != '\n')
         ++i;
@@ -62,6 +68,12 @@ String trim_end(String s)
 static inline
 String chop_word(String *input)
 {
+    // TODO: is this guard even needed?
+    if (input->len == 0) {
+        String result = { .data = NULL, .len = 0 };
+        return result;
+    }
+
     *input = trim_begin(*input);
 
     uint64_t i = 0;

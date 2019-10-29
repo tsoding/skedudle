@@ -17,6 +17,8 @@
 #include <unistd.h>
 
 #include "s.h"
+#include "response.h"
+#include "request.h"
 
 #define KILO 1024
 #define MEGA (1024 * KILO)
@@ -24,28 +26,6 @@
 
 #define REQUEST_BUFFER_CAPACITY (640 * KILO)
 char request_buffer[REQUEST_BUFFER_CAPACITY];
-
-void response_status_line(int fd, int code)
-{
-    dprintf(fd, "HTTP/1.1 %d\n", code);
-}
-
-void response_header(int fd, const char *name, const char *value_format, ...)
-{
-    va_list args;
-    va_start(args, value_format);
-
-    dprintf(fd, "%s: ", name);
-    vdprintf(fd, value_format, args);
-    dprintf(fd, "\n");
-
-    va_end(args);
-}
-
-void response_body_start(int fd)
-{
-    dprintf(fd, "\n");
-}
 
 void http_error_page_template(int fd, int code)
 {
@@ -133,27 +113,20 @@ int handle_request(int fd, struct sockaddr_in *addr)
         .data = request_buffer
     };
 
-    String line = trim_end(chop_line(&buffer));
+    Status_Line status_line = chop_status_line(&buffer);
 
-    if (!line.len) {
-        return http_error(fd, 400, "Empty status line\n");
-    }
-
-    String method = chop_word(&line);
-    if (!string_equal(method, string_null("GET"))) {
+    if (!string_equal(status_line.method, string_null("GET"))) {
         return http_error(fd, 405, "Unknown method\n");
     }
-
-    String path = chop_word(&line);
     printf("[%.*s] %.*s\n",
-           (int) method.len, method.data,
-           (int) path.len, path.data);
+           (int) status_line.method.len, status_line.method.data,
+           (int) status_line.path.len, status_line.path.data);
 
-    if (string_equal(path, string_null("/"))) {
+    if (string_equal(status_line.path, string_null("/"))) {
         return serve_file(fd, "./index.html", "text/html");
     }
 
-    if (string_equal(path, string_null("/favicon.png"))) {
+    if (string_equal(status_line.path, string_null("/favicon.png"))) {
         return serve_file(fd, "./favicon.png", "image/png");
     }
 
