@@ -25,37 +25,6 @@
 #define REQUEST_BUFFER_CAPACITY (640 * KILO)
 char request_buffer[REQUEST_BUFFER_CAPACITY];
 
-void write_error_response(int fd, int code)
-{
-    // TODO: not standard
-    dprintf(
-        fd,
-        "HTTP/1.1 %d OMEGALUL\n"
-        "Content-Type: text/html\n"
-        "\n"
-        "<html>"
-          "<head>"
-            "<title>Error code %d</title>"
-          "</head>"
-          "<body>"
-             "<h1>Error code %d</h1>"
-          "</body>"
-        "</html>",
-        code, code, code);
-}
-
-int http_error(int fd, int code, const char *format, ...)
-{
-    va_list args;
-    va_start(args, format);
-    vfprintf(stderr, format, args);
-    va_end(args);
-
-    write_error_response(fd, code);
-
-    return 1;
-}
-
 void response_status_line(int fd, int code)
 {
     dprintf(fd, "HTTP/1.1 %d\n", code);
@@ -76,6 +45,37 @@ void response_header(int fd, const char *name, const char *value_format, ...)
 void response_body_start(int fd)
 {
     dprintf(fd, "\n");
+}
+
+void http_error_page_template(int fd, int code)
+{
+    // TODO: not standard
+    dprintf(
+        fd,
+        "<html>"
+          "<head>"
+            "<title>Error code %d</title>"
+          "</head>"
+          "<body>"
+             "<h1>Error code %d</h1>"
+          "</body>"
+        "</html>",
+        code, code);
+}
+
+int http_error(int fd, int code, const char *format, ...)
+{
+    va_list args;
+    va_start(args, format);
+    vfprintf(stderr, format, args);
+    va_end(args);
+
+    response_status_line(fd, code);
+    response_header(fd, "Content-Type", "text/html");
+    response_body_start(fd);
+    http_error_page_template(fd, code);
+
+    return 1;
 }
 
 int serve_file(int dest_fd,
