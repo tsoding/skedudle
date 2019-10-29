@@ -22,9 +22,8 @@
 #define MEGA (1024 * KILO)
 #define GIGA (1024 * MEGA)
 
-#define REQUEST_BUFFER_CAPACITY (640 * MEGA)
+#define REQUEST_BUFFER_CAPACITY (640 * KILO)
 char request_buffer[REQUEST_BUFFER_CAPACITY];
-jmp_buf handle_request_return;
 
 void write_error_response(int fd, int code)
 {
@@ -53,7 +52,8 @@ int http_error(int fd, int code, const char *format, ...)
     va_end(args);
 
     write_error_response(fd, code);
-    longjmp(handle_request_return, 1);
+
+    return 1;
 }
 
 void response_status_line(int fd, int code)
@@ -78,7 +78,7 @@ void response_body_start(int fd)
     dprintf(fd, "\n");
 }
 
-void serve_file(int dest_fd,
+int serve_file(int dest_fd,
                 const char *filepath,
                 const char *content_type)
 {
@@ -87,12 +87,12 @@ void serve_file(int dest_fd,
     struct stat file_stat;
     int err = stat(filepath, &file_stat);
     if (err < 0) {
-        http_error(dest_fd, 404, strerror(errno));
+        return http_error(dest_fd, 404, strerror(errno));
     }
 
     src_fd = open(filepath, O_RDONLY);
     if (src_fd < 0) {
-        http_error(dest_fd, 404, strerror(errno));
+        return http_error(dest_fd, 404, strerror(errno));
     }
 
     response_status_line(dest_fd, 200);
@@ -116,17 +116,17 @@ void serve_file(int dest_fd,
         close(src_fd);
     }
 
-    longjmp(handle_request_return, 1);
+    return 0;
 }
 
-void handle_request(int fd, struct sockaddr_in *addr)
+int handle_request(int fd, struct sockaddr_in *addr)
 {
     assert(addr);
 
     ssize_t request_buffer_size = read(fd, request_buffer, REQUEST_BUFFER_CAPACITY);
 
-    if (request_buffer_size == 0) http_error(fd, 400, "EOF");
-    if (request_buffer_size < 0)  http_error(fd, 500, strerror(errno));
+    if (request_buffer_size == 0) return http_error(fd, 400, "EOF");
+    if (request_buffer_size < 0)  return http_error(fd, 500, strerror(errno));
 
     String buffer = {
         .len = (uint64_t)request_buffer_size,
@@ -136,12 +136,12 @@ void handle_request(int fd, struct sockaddr_in *addr)
     String line = trim_end(chop_line(&buffer));
 
     if (!line.len) {
-        http_error(fd, 400, "Empty status line\n");
+        return http_error(fd, 400, "Empty status line\n");
     }
 
     String method = chop_word(&line);
     if (!string_equal(method, string_null("GET"))) {
-        http_error(fd, 405, "Unknown method\n");
+        return http_error(fd, 405, "Unknown method\n");
     }
 
     String path = chop_word(&line);
@@ -150,16 +150,14 @@ void handle_request(int fd, struct sockaddr_in *addr)
            (int) path.len, path.data);
 
     if (string_equal(path, string_null("/"))) {
-        serve_file(fd, "./index.html", "text/html");
+        return serve_file(fd, "./index.html", "text/html");
     }
 
     if (string_equal(path, string_null("/favicon.png"))) {
-        serve_file(fd, "./favicon.png", "image/png");
+        return serve_file(fd, "./favicon.png", "image/png");
     }
 
-    http_error(fd, 404, "Unknown path\n");
-
-    // TODO: what if no request terminating function was ever called
+    return http_error(fd, 404, "Unknown path\n");
 }
 
 int main(int argc, char *argv[])
@@ -215,9 +213,7 @@ int main(int argc, char *argv[])
 
         assert(client_addrlen == sizeof(client_addr));
 
-        if (setjmp(handle_request_return) == 0) {
-            handle_request(client_fd, &client_addr);
-        }
+        handle_request(client_fd, &client_addr);
 
         err = close(client_fd);
         if (err < 0) {
