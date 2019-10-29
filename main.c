@@ -202,6 +202,8 @@ int main(int argc, char *argv[])
         exit(1);
     }
 
+    printf("[INFO] Listening to http://localhost:%d/\n", port);
+
     for (;;) {
         struct sockaddr_in client_addr;
         socklen_t client_addrlen = 0;
