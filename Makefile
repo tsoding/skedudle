@@ -1,5 +1,7 @@
 CFLAGS=-Wall -Wextra -Werror -Wconversion -pedantic -std=c11
+CS=src/main.c
 LIBS=
 
-nodec: main.c
-	gcc $(CFLAGS) -o nodec main.c $(LIBS)
+nodec: $(CS)
+	gcc $(CFLAGS) -o nodec $(CS) $(LIBS)
+
