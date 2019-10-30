@@ -29,7 +29,6 @@ void compile_c_code(String s) {
     printf("%.*s\n", (int) s.len, s.data);
 }
 
-
 void compile_byte_array(String s) {
     printf("write(OUT, \"");
     for (uint64_t i = 0; i < s.len; ++i) {
@@ -45,7 +44,6 @@ int main(int argc, char *argv[])
         return 1;
     }
     const char *filepath = argv[1];
-    printf("Compiling %s...\n", filepath);
     const char *buffer = file_as_content(filepath);
     assert(buffer);
 
@@ -59,7 +57,6 @@ int main(int argc, char *argv[])
             compile_byte_array(token);
         }
         c_code_mode = !c_code_mode;
-        printf("//------------------------\n");
     }
 
     return 0;
