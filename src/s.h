@@ -30,7 +30,7 @@ String string_empty(void)
 }
 
 static inline
-String chop_line(String *input)
+String chop_until_char(String *input, char delim)
 {
     // TODO: is this guard even needed?
     if (input->len == 0) {
@@ -38,7 +38,7 @@ String chop_line(String *input)
     }
 
     uint64_t i = 0;
-    while (i < input->len && input->data[i] != '\n')
+    while (i < input->len && input->data[i] != delim)
         ++i;
 
     String line;
@@ -54,6 +54,10 @@ String chop_line(String *input)
     }
 
     return line;
+}
+
+String chop_line(String *input) {
+    return chop_until_char(input, '\n');
 }
 
 static inline
