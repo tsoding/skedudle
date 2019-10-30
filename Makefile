@@ -1,15 +1,16 @@
-CFLAGS=-Wall -Wextra -Werror -Wconversion -pedantic -std=c11
+CFLAGS=-Wall -Wextra -Werror -Wconversion -Wno-unused-result -pedantic -std=c11
 CS=src/main.c
-HS=src/s.h src/request.h src/response.h
+HS=src/s.h src/request.h src/response.h src/error_page.h
 LIBS=
 
-all: tt nodec
+nodec: $(CS) $(HS)
+	gcc $(CFLAGS) -o nodec $(CS) $(LIBS)
 
 tt: src/tt.c
 	gcc $(CFLAGS) -o tt src/tt.c
 
-nodec: $(CS) $(HS)
-	gcc $(CFLAGS) -o nodec $(CS) $(LIBS)
+src/error_page.h: tt src/error_page.h.tt
+	./tt src/error_page.h.tt > src/error_page.h
 
 .PHONY: clean
 

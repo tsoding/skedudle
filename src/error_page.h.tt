@@ -1,0 +1,8 @@
+<html>
+  <head>
+    <title>Error code %INT(code)%</title>
+  </head>
+  <body>
+     <h1>Error code %INT(code)%</h1>
+  </body>
+</html>

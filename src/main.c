@@ -27,20 +27,11 @@
 #define REQUEST_BUFFER_CAPACITY (640 * KILO)
 char request_buffer[REQUEST_BUFFER_CAPACITY];
 
-void http_error_page_template(int fd, int code)
+void http_error_page_template(int OUT, int code)
 {
-    // TODO: not standard
-    dprintf(
-        fd,
-        "<html>"
-          "<head>"
-            "<title>Error code %d</title>"
-          "</head>"
-          "<body>"
-             "<h1>Error code %d</h1>"
-          "</body>"
-        "</html>",
-        code, code);
+#define INT(x) dprintf(OUT, "%d", x);
+#include "error_page.h"
+#undef INT
 }
 
 int http_error(int fd, int code, const char *format, ...)
