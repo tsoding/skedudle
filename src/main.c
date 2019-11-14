@@ -127,7 +127,7 @@ int handle_request(int fd, struct sockaddr_in *addr)
 int main(int argc, char *argv[])
 {
     if (argc < 2) {
-        fprintf(stderr, "nodec <port>\n");
+        fprintf(stderr, "nodec <port> [address]\n");
         exit(1);
     }
 
@@ -143,6 +143,11 @@ int main(int argc, char *argv[])
         }
     }
 
+    const char *addr = "127.0.0.1";
+    if (argc >= 3) {
+        addr = argv[2];
+    }
+
     int server_fd = socket(AF_INET, SOCK_STREAM, 0);
     if (server_fd < 0) {
         fprintf(stderr, "Could not create socket epicly: %s\n", strerror(errno));
@@ -153,6 +158,7 @@ int main(int argc, char *argv[])
     memset(&server_addr, 0, sizeof(server_addr));
     server_addr.sin_family = AF_INET;
     server_addr.sin_port = htons(port);
+    server_addr.sin_addr.s_addr = inet_addr(addr);
 
     ssize_t err = bind(server_fd, (struct sockaddr*) &server_addr, sizeof(server_addr));
     if (err != 0) {
@@ -166,7 +172,7 @@ int main(int argc, char *argv[])
         exit(1);
     }
 
-    printf("[INFO] Listening to http://localhost:%d/\n", port);
+    printf("[INFO] Listening to http://%s:%d/\n", addr, port);
 
     for (;;) {
         struct sockaddr_in client_addr;
