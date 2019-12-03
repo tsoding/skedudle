@@ -1,6 +1,6 @@
-CFLAGS=-Wall -Wextra -Werror -Wconversion -Wno-unused-result -pedantic -std=c11
-CS=src/main.c
-HS=src/s.h src/request.h src/response.h src/error_page.h
+CFLAGS=-Wall -Wextra -Werror -Wno-unused-result -pedantic -std=c11 -I./third_party/frozen/
+CS=src/main.c src/schedule.c
+HS=src/s.h src/request.h src/response.h src/error_page.h src/schedule.h
 LIBS=
 
 nodec: $(CS) $(HS) frozen.o
