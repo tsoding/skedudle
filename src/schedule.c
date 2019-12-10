@@ -7,7 +7,7 @@
 #include "schedule.h"
 
 static
-void scan_days(const char *str, int str_len,
+void json_scan_days(const char *str, int str_len,
                uint8_t *days)
 {
     assert(str);
@@ -27,7 +27,7 @@ void scan_days(const char *str, int str_len,
 }
 
 static
-void scan_time(const char *str, int str_len,
+void json_scan_time(const char *str, int str_len,
                int *time_min)
 {
     assert(str);
@@ -45,6 +45,7 @@ void scan_time(const char *str, int str_len,
     *time_min = tm.tm_hour * 60 + tm.tm_min;
 }
 
+static
 void json_scan_project(const char *str, int str_len,
                        struct Project *project)
 {
@@ -61,7 +62,45 @@ void json_scan_project(const char *str, int str_len,
         &project->name,
         &project->description,
         &project->url,
-        scan_days, &project->days,
-        scan_time, &project->time_min,
+        json_scan_days, &project->days,
+        json_scan_time, &project->time_min,
         &project->channel);
+}
+
+static
+size_t json_array_len(const char *str, int str_len)
+{
+    size_t n = 0;
+    struct json_token t;
+    while (json_scanf_array_elem(str, str_len, "", n, &t) > 0)
+        ++n;
+    return n;
+}
+
+static
+void json_scan_projects(const char *str, int str_len,
+                   struct Schedule* schedule)
+{
+    schedule->projects_size = json_array_len(str, str_len);
+    schedule->projects = calloc(
+        schedule->projects_size,
+        sizeof(struct Project));
+
+    struct json_token t;
+    for (int i = 0;
+         json_scanf_array_elem(str, str_len, "", i, &t) > 0;
+         i++)
+    {
+        json_scan_project(t.ptr, t.len,
+                          schedule->projects + i); // this parses thing
+    }
+}
+
+void json_scan_schedule(String input,
+                        struct Schedule *schedule)
+{
+    json_scanf(
+        input.data, input.len,
+        "{ projects: %M }",
+        json_scan_projects, schedule);
 }

@@ -2,9 +2,11 @@
 #define S_H_
 
 #include <ctype.h>
+#include <stdlib.h>
+#include <string.h>
 
 typedef struct  {
-    uint64_t len;
+    size_t len;
     const char *data;
 } String;
 
@@ -37,7 +39,7 @@ String chop_until_char(String *input, char delim)
         return string_empty();
     }
 
-    uint64_t i = 0;
+    size_t i = 0;
     while (i < input->len && input->data[i] != delim)
         ++i;
 
@@ -56,6 +58,7 @@ String chop_until_char(String *input, char delim)
     return line;
 }
 
+static inline
 String chop_line(String *input) {
     return chop_until_char(input, '\n');
 }
@@ -89,7 +92,7 @@ String chop_word(String *input)
 
     *input = trim_begin(*input);
 
-    uint64_t i = 0;
+    size_t i = 0;
     while (i < input->len && !isspace(input->data[i])) {
         ++i;
     }
@@ -104,6 +107,7 @@ String chop_word(String *input)
     return word;
 }
 
+static inline
 int string_equal(String a, String b)
 {
     if (a.len != b.len) return 0;

@@ -1,7 +1,9 @@
 #ifndef SCHEDULE_H_
 #define SCHEDULE_H_
 
+#include <stdlib.h>
 #include <stdint.h>
+#include "s.h"
 
 struct Project
 {
@@ -13,7 +15,12 @@ struct Project
     const char *channel;
 };
 
-void json_scan_project(const char *str, int str_len,
-                       struct Project *project);
+struct Schedule
+{
+    struct Project *projects;
+    size_t projects_size;
+};
+
+void json_scan_schedule(String input, struct Schedule *schedule);
 
 #endif  // SCHEDULE_H_

@@ -1,4 +1,9 @@
+# binaries
 nodec
 tt
+schedule_test
+
+# intermediate garbage
 error_page.h
 *.o
+*.json

@@ -1,7 +1,9 @@
-CFLAGS=-Wall -Wextra -Werror -Wno-unused-result -pedantic -std=c11 -I./third_party/frozen/
+CFLAGS=-Wall -Wextra -Werror -Wno-unused-result -pedantic -std=c11 -I./third_party/frozen/ -ggdb
 CS=src/main.c src/schedule.c
 HS=src/s.h src/request.h src/response.h src/error_page.h src/schedule.h
 LIBS=
+
+all: nodec schedule_test
 
 nodec: $(CS) $(HS) frozen.o
 	gcc $(CFLAGS) -o nodec $(CS) frozen.o $(LIBS)
@@ -15,8 +17,5 @@ tt: src/tt.c
 src/error_page.h: tt src/error_page.h.tt
 	./tt src/error_page.h.tt > src/error_page.h
 
-.PHONY: clean
-
-clean:
-	rm -rf nodec tt
-
+schedule_test: src/schedule_test.c src/schedule.c frozen.o
+	gcc $(CFLAGS) -o schedule_test src/schedule_test.c src/schedule.c frozen.o
