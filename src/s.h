@@ -10,16 +10,18 @@ typedef struct  {
     const char *data;
 } String;
 
-// Construct String from NULL-terminated C string
 static inline
-String string_nt(const char *s)
+String string(size_t len, const char *data)
 {
     String result = {
-        .len = strlen(s),
-        .data = s
+        .len = len,
+        .data = data
     };
+
     return result;
 }
+
+#define SLT(literal) string(sizeof(literal) - 1, literal)
 
 static inline
 String string_empty(void)

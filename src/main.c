@@ -103,18 +103,18 @@ int handle_request(int fd, struct sockaddr_in *addr)
 
     Status_Line status_line = chop_status_line(&buffer);
 
-    if (!string_equal(status_line.method, string_nt("GET"))) {
+    if (!string_equal(status_line.method, SLT("GET"))) {
         return http_error(fd, 405, "Unknown method\n");
     }
     printf("[%.*s] %.*s\n",
            (int) status_line.method.len, status_line.method.data,
            (int) status_line.path.len, status_line.path.data);
 
-    if (string_equal(status_line.path, string_nt("/"))) {
+    if (string_equal(status_line.path, SLT("/"))) {
         return serve_file(fd, "./index.html", "text/html");
     }
 
-    if (string_equal(status_line.path, string_nt("/favicon.png"))) {
+    if (string_equal(status_line.path, SLT("/favicon.png"))) {
         return serve_file(fd, "./favicon.png", "image/png");
     }
 
