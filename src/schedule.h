@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include "s.h"
+#include "memory.h"
 
 struct Project
 {
@@ -21,6 +22,8 @@ struct Schedule
     size_t projects_size;
 };
 
-void json_scan_schedule(String input, struct Schedule *schedule);
+void json_scan_schedule(Memory *memory,
+                        String input,
+                        struct Schedule *schedule);
 
 #endif  // SCHEDULE_H_

@@ -19,10 +19,7 @@
 #include "s.h"
 #include "response.h"
 #include "request.h"
-
-#define KILO 1024
-#define MEGA (1024 * KILO)
-#define GIGA (1024 * MEGA)
+#include "memory.h"
 
 #define REQUEST_BUFFER_CAPACITY (640 * KILO)
 char request_buffer[REQUEST_BUFFER_CAPACITY];

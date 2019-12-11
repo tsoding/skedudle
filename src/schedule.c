@@ -77,30 +77,42 @@ size_t json_array_len(const char *str, int str_len)
     return n;
 }
 
+typedef struct {
+    Memory *memory;
+    struct Schedule *schedule;
+} Context;
+
 static
 void json_scan_projects(const char *str, int str_len,
-                   struct Schedule* schedule)
+                        Context* context)
 {
-    schedule->projects_size = json_array_len(str, str_len);
-    schedule->projects = calloc(
-        schedule->projects_size,
-        sizeof(struct Project));
+    context->schedule->projects_size = json_array_len(str, str_len);
+    context->schedule->projects = memory_alloc(
+        context->memory,
+        context->schedule->projects_size * sizeof(struct Project));
 
     struct json_token t;
     for (int i = 0;
          json_scanf_array_elem(str, str_len, "", i, &t) > 0;
          i++)
     {
-        json_scan_project(t.ptr, t.len,
-                          schedule->projects + i); // this parses thing
+        json_scan_project(
+            t.ptr, t.len,
+            context->schedule->projects + i); // this parses thing
     }
 }
 
-void json_scan_schedule(String input,
+void json_scan_schedule(Memory *memory,
+                        String input,
                         struct Schedule *schedule)
 {
+    Context context = {
+        .memory = memory,
+        .schedule = schedule,
+    };
+
     json_scanf(
         input.data, input.len,
         "{ projects: %M }",
-        json_scan_projects, schedule);
+        json_scan_projects, &context);
 }
