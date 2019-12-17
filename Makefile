@@ -1,4 +1,4 @@
-CFLAGS=-Wall -Wextra -Werror -Wno-unused-result -pedantic -std=c11 -I./third_party/frozen/ -ggdb
+CFLAGS=-Wall -Wextra -Wno-unused-result -pedantic -std=c11 -I./third_party/frozen/ -ggdb
 CS=src/main.c src/schedule.c
 HS=src/s.h src/request.h src/response.h src/error_page.h src/schedule.h
 LIBS=

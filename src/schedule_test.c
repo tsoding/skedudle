@@ -32,6 +32,14 @@ String read_whole_file(Memory *memory, const char *filepath)
 }
 
 #define MEMORY_CAPACITY (640 * KILO)
+static Memory memory;
+
+static void *epic_alloc(size_t size)
+{
+    return memory_alloc(&memory, size);
+}
+
+static void epic_free(void *ptr) { (void)ptr;}
 
 int main(int argc, char *argv[])
 {
@@ -40,9 +48,11 @@ int main(int argc, char *argv[])
         exit(1);
     }
 
-    Memory memory;
     memory.capacity = MEMORY_CAPACITY;
     memory.buffer = malloc(MEMORY_CAPACITY);
+
+    allocator.alloc = epic_alloc;
+    allocator.free = epic_free;
 
     String content = read_whole_file(&memory, argv[1]);
     struct Schedule schedule;
@@ -50,13 +60,10 @@ int main(int argc, char *argv[])
     json_scan_schedule(&memory, content, &schedule);
 
     // TODO: error report?
-    // TODO: memory management
 
     for (size_t i = 0; i < schedule.projects_size; ++i) {
         printf("Title: %s\n", schedule.projects[i].name);
     }
-
-    // printf("Memory used %zu bytes out of %zu bytes\n", json_memory.size, json_memory.capacity);
 
     free(memory.buffer);
 
