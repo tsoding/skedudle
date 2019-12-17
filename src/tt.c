@@ -5,7 +5,7 @@
 #include <string.h>
 #include "s.h"
 
-const char *file_as_content(const char *filepath) {
+String file_as_content(const char *filepath) {
     assert(filepath);
 
     FILE *f = fopen(filepath, "rb");
@@ -22,7 +22,7 @@ const char *file_as_content(const char *filepath) {
     assert(n == (size_t) m);
 
     fclose(f);
-    return buffer;
+    return string(n, buffer);
 }
 
 void compile_c_code(String s) {
@@ -44,10 +44,7 @@ int main(int argc, char *argv[])
         return 1;
     }
     const char *filepath = argv[1];
-    const char *buffer = file_as_content(filepath);
-    assert(buffer);
-
-    String template = string_nt(buffer);
+    String template = file_as_content(filepath);
     int c_code_mode = 0;
     while (template.len) {
         String token = chop_until_char(&template, '%');
