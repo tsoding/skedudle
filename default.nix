@@ -1,6 +1,6 @@
 with import <nixpkgs> {}; rec {
-  nodecEnv = stdenv.mkDerivation {
-    name = "nodec-env";
+  skedudleEnv = stdenv.mkDerivation {
+    name = "skedudle-env";
     buildInputs = [ stdenv gcc gdb valgrind gnumake pkgconfig ];
   };
 }

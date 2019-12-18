@@ -124,7 +124,7 @@ int handle_request(int fd, struct sockaddr_in *addr)
 int main(int argc, char *argv[])
 {
     if (argc < 2) {
-        fprintf(stderr, "nodec <port> [address]\n");
+        fprintf(stderr, "skedudle <port> [address]\n");
         exit(1);
     }
 

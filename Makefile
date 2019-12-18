@@ -3,10 +3,10 @@ CS=src/main.c src/schedule.c
 HS=src/s.h src/request.h src/response.h src/error_page.h src/schedule.h
 LIBS=
 
-all: nodec schedule_test frozen_test
+all: skedudle schedule_test frozen_test
 
-nodec: $(CS) $(HS) frozen.o
-	gcc $(CFLAGS) -o nodec $(CS) frozen.o $(LIBS)
+skedudle: $(CS) $(HS) frozen.o
+	gcc $(CFLAGS) -o skedudle $(CS) frozen.o $(LIBS)
 
 frozen_test: third_party/frozen/unit_test.c
 	gcc -std=c99 -O0 -fno-builtin -rdynamic -ggdb -Wall -pedantic -o frozen_test third_party/frozen/unit_test.c -lm
