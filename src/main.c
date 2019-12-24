@@ -15,11 +15,13 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <sys/mman.h>
 
 #include "s.h"
 #include "response.h"
 #include "request.h"
 #include "memory.h"
+#include "schedule.h"
 
 #define REQUEST_BUFFER_CAPACITY (640 * KILO)
 char request_buffer[REQUEST_BUFFER_CAPACITY];
@@ -87,7 +89,20 @@ int serve_file(int dest_fd,
     return 0;
 }
 
-int handle_request(int fd, struct sockaddr_in *addr)
+int serve_projects_list(int dest_fd, struct Schedule *schedule)
+{
+    response_status_line(dest_fd, 200);
+    response_header(dest_fd, "Content-Type", "text/plain");
+    response_body_start(dest_fd);
+
+    for (size_t i = 0; i < schedule->projects_size; ++i) {
+        dprintf(dest_fd, "%s\n", schedule->projects[i].name);
+    }
+
+    return 0;
+}
+
+int handle_request(int fd, struct sockaddr_in *addr, struct Schedule *schedule)
 {
     assert(addr);
 
@@ -118,11 +133,54 @@ int handle_request(int fd, struct sockaddr_in *addr)
         return serve_file(fd, "./favicon.png", "image/png");
     }
 
+    if (string_equal(status_line.path, SLT("/projects.txt"))) {
+        return serve_projects_list(fd, schedule);
+    }
+
     return http_error(fd, 404, "Unknown path\n");
+}
+
+#define MEMORY_CAPACITY (640 * KILO)
+
+String mmap_file_to_string(const char *filepath)
+{
+    int fd = open(filepath, O_RDONLY);
+    assert(fd >= 0);
+
+    struct stat fd_stat;
+    int err = fstat(fd, &fd_stat);
+    assert(err == 0);
+
+    String result;
+    result.len = fd_stat.st_size;
+    result.data = mmap(NULL, result.len, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 0);
+    assert(result.data);
+    close(fd);
+
+    return result;
+}
+
+void munmap_string(String s)
+{
+    munmap((void*) s.data, s.len);
 }
 
 int main(int argc, char *argv[])
 {
+    // TODO: schedule.json file is hardcoded
+    const char *filepath = "./schedule.json";
+
+    Memory json_memory = {0};
+    json_memory.capacity = MEMORY_CAPACITY;
+    json_memory.buffer = malloc(MEMORY_CAPACITY);
+
+    String input = mmap_file_to_string(filepath);
+
+    struct Schedule schedule;
+
+    json_scan_schedule(&json_memory, input, &schedule);
+    munmap_string(input);
+
     if (argc < 2) {
         fprintf(stderr, "skedudle <port> [address]\n");
         exit(1);
@@ -182,13 +240,15 @@ int main(int argc, char *argv[])
 
         assert(client_addrlen == sizeof(client_addr));
 
-        handle_request(client_fd, &client_addr);
+        handle_request(client_fd, &client_addr, &schedule);
 
         err = close(client_fd);
         if (err < 0) {
             fprintf(stderr, "Could not close client connection: %s\n", strerror(errno));
         }
     }
+
+    free(json_memory.buffer);
 
     return 0;
 }

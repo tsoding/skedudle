@@ -3,7 +3,7 @@ CS=src/main.c src/schedule.c
 HS=src/s.h src/request.h src/response.h src/error_page.h src/schedule.h
 LIBS=
 
-all: skedudle schedule_test frozen_test
+all: skedudle frozen_test
 
 skedudle: $(CS) $(HS) frozen.o
 	gcc $(CFLAGS) -o skedudle $(CS) frozen.o $(LIBS)
@@ -19,6 +19,3 @@ tt: src/tt.c
 
 src/error_page.h: tt src/error_page.h.tt
 	./tt src/error_page.h.tt > src/error_page.h
-
-schedule_test: src/schedule_test.c src/schedule.c frozen.o
-	gcc $(CFLAGS) -o schedule_test src/schedule_test.c src/schedule.c frozen.o
