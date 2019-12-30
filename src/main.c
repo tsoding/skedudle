@@ -170,7 +170,13 @@ void munmap_string(String s)
 
 int main(int argc, char *argv[])
 {
+    if (argc < 2) {
+        fprintf(stderr, "skedudle <port> [address]\n");
+        exit(1);
+    }
+
     // TODO: schedule.json file is hardcoded
+
     const char *filepath = "./schedule.json";
 
     Memory json_memory = {0};
@@ -178,16 +184,9 @@ int main(int argc, char *argv[])
     json_memory.buffer = malloc(MEMORY_CAPACITY);
 
     String input = mmap_file_to_string(filepath);
-
     struct Schedule schedule;
-
     json_scan_schedule(&json_memory, input, &schedule);
     munmap_string(input);
-
-    if (argc < 2) {
-        fprintf(stderr, "skedudle <port> [address]\n");
-        exit(1);
-    }
 
     uint16_t port = 0;
 
