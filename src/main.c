@@ -145,7 +145,10 @@ int handle_request(int fd, struct sockaddr_in *addr, struct Schedule *schedule)
 String mmap_file_to_string(const char *filepath)
 {
     int fd = open(filepath, O_RDONLY);
-    assert(fd >= 0);
+    if (fd < 0) {
+        fprintf(stderr, "Cannot open file `%s'\n", filepath);
+        abort();
+    }
 
     struct stat fd_stat;
     int err = fstat(fd, &fd_stat);
