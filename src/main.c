@@ -136,12 +136,6 @@ int serve_projects_list(int dest_fd, struct Schedule *schedule)
         if (i > 0) write(dest_fd, ",", 1);
         print_json_string_literal(dest_fd, schedule->projects[i].name);
     }
-    write(dest_fd, ",", 1);
-    print_json_string_literal(dest_fd, "foo\nbar");
-    write(dest_fd, ",", 1);
-    print_json_string_literal(dest_fd, "foo\"bar");
-    write(dest_fd, ",", 1);
-    print_json_string_literal(dest_fd, "фу\"бар");
     write(dest_fd, "]\n", 2);
 
     return 0;
