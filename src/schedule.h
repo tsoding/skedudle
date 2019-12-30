@@ -20,6 +20,7 @@ struct Schedule
 {
     struct Project *projects;
     size_t projects_size;
+    const char *timezone;
 };
 
 void json_scan_schedule(Memory *memory,

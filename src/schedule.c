@@ -113,6 +113,10 @@ void json_scan_schedule(Memory *memory,
 
     json_scanf(
         input.data, input.len,
-        "{ projects: %M }",
-        json_scan_projects, &context);
+        "{"
+        "    projects: %M,"
+        "    timezone: %Q"
+        "}",
+        json_scan_projects, &context,
+        &schedule->timezone);
 }
