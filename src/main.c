@@ -22,6 +22,7 @@
 #include "request.h"
 #include "memory.h"
 #include "schedule.h"
+#include "frozen.h"
 
 #define REQUEST_BUFFER_CAPACITY (640 * KILO)
 char request_buffer[REQUEST_BUFFER_CAPACITY];
@@ -89,15 +90,59 @@ int serve_file(int dest_fd,
     return 0;
 }
 
+int print_json_escaped_string(int fd, const char *p, size_t len) {
+    size_t i, cl, n = 0;
+    const char *hex_digits = "0123456789abcdef";
+    const char *specials = "btnvfr";
+
+    for (i = 0; i < len; i++) {
+        unsigned char ch = ((unsigned char *) p)[i];
+        if (ch == '"' || ch == '\\') {
+            n += write(fd, "\\", 1);
+            n += write(fd, p + i, 1);
+        } else if (ch >= '\b' && ch <= '\r') {
+            n += write(fd, "\\", 1);
+            n += write(fd, &specials[ch - '\b'], 1);
+        } else if (isprint(ch)) {
+            n += write(fd, p + i, 1);
+        } else if ((cl = json_get_utf8_char_len(ch)) == 1) {
+            n += write(fd, "\\u00", 4);
+            n += write(fd, &hex_digits[(ch >> 4) % 0xf], 1);
+            n += write(fd, &hex_digits[ch % 0xf], 1);
+        } else {
+            n += write(fd, p + i, cl);
+            i += cl - 1;
+        }
+    }
+
+    return n;
+}
+
+void print_json_string_literal(int fd, const char *literal)
+{
+    write(fd, "\"", 1);
+    print_json_escaped_string(fd, literal, strlen(literal));
+    write(fd, "\"", 1);
+}
+
 int serve_projects_list(int dest_fd, struct Schedule *schedule)
 {
     response_status_line(dest_fd, 200);
-    response_header(dest_fd, "Content-Type", "text/plain");
+    response_header(dest_fd, "Content-Type", "application/json");
     response_body_start(dest_fd);
 
+    write(dest_fd, "[", 1);
     for (size_t i = 0; i < schedule->projects_size; ++i) {
-        dprintf(dest_fd, "%s\n", schedule->projects[i].name);
+        if (i > 0) write(dest_fd, ",", 1);
+        print_json_string_literal(dest_fd, schedule->projects[i].name);
     }
+    write(dest_fd, ",", 1);
+    print_json_string_literal(dest_fd, "foo\nbar");
+    write(dest_fd, ",", 1);
+    print_json_string_literal(dest_fd, "foo\"bar");
+    write(dest_fd, ",", 1);
+    print_json_string_literal(dest_fd, "фу\"бар");
+    write(dest_fd, "]\n", 2);
 
     return 0;
 }
@@ -133,7 +178,7 @@ int handle_request(int fd, struct sockaddr_in *addr, struct Schedule *schedule)
         return serve_file(fd, "./favicon.png", "image/png");
     }
 
-    if (string_equal(status_line.path, SLT("/projects.txt"))) {
+    if (string_equal(status_line.path, SLT("/projects"))) {
         return serve_projects_list(fd, schedule);
     }
 
