@@ -6,6 +6,7 @@
 #include <errno.h>
 #include <setjmp.h>
 #include <stdarg.h>
+#include <time.h>
 
 #include <arpa/inet.h>
 #include <fcntl.h>
@@ -16,6 +17,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <sys/mman.h>
+#include <sys/time.h>
 
 #include "s.h"
 #include "response.h"
@@ -141,6 +143,27 @@ int serve_projects_list(int dest_fd, struct Schedule *schedule)
     return 0;
 }
 
+int serve_next_stream(int dest_fd, struct Schedule *schedule)
+{
+    response_status_line(dest_fd, 200);
+    response_header(dest_fd, "Content-Type", "application/json");
+    response_body_start(dest_fd);
+
+    time_t current_time = time(NULL) - timezone;
+    struct tm *current_tm = gmtime(&current_time);
+
+    // TODO: serve_next_stream is unfinished
+    for (size_t i = 0; i < schedule->projects_size; ++i) {
+        int x = (current_tm->tm_wday + 6) % 7;
+        if (schedule->projects[i].days & (1 << x)) {
+            print_json_string_literal(dest_fd, schedule->projects[i].name);
+            write(dest_fd, "\n", 1);
+        }
+    }
+
+    return 0;
+}
+
 int handle_request(int fd, struct sockaddr_in *addr, struct Schedule *schedule)
 {
     assert(addr);
@@ -174,6 +197,10 @@ int handle_request(int fd, struct sockaddr_in *addr, struct Schedule *schedule)
 
     if (string_equal(status_line.path, SLT("/projects"))) {
         return serve_projects_list(fd, schedule);
+    }
+
+    if (string_equal(status_line.path, SLT("/next_stream"))) {
+        return serve_next_stream(fd, schedule);
     }
 
     return http_error(fd, 404, "Unknown path\n");
@@ -226,6 +253,13 @@ int main(int argc, char *argv[])
     struct Schedule schedule;
     json_scan_schedule(&json_memory, input, &schedule);
     munmap_string(input);
+
+    printf("Schedule timezone: %s\n", schedule.timezone);
+
+    char schedule_timezone[256];
+    snprintf(schedule_timezone, 256, ":%s", schedule.timezone);
+    setenv("TZ", schedule_timezone, 1);
+    tzset();
 
     uint16_t port = 0;
 
