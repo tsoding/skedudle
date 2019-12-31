@@ -283,6 +283,8 @@ int main(int argc, char *argv[])
         fprintf(stderr, "Could not create socket epicly: %s\n", strerror(errno));
         exit(1);
     }
+    int option = 1;
+    setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &option, sizeof(option));
 
     struct sockaddr_in server_addr;
     memset(&server_addr, 0, sizeof(server_addr));
