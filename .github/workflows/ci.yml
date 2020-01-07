@@ -10,5 +10,5 @@ jobs:
         run: git submodule update --init --recursive
       - name: build
         run: make
-      - name: test frozen
-        run: ./test_frozen
+      - name: frozen test
+        run: ./frozen_test
