@@ -238,14 +238,17 @@ void munmap_string(String s)
 
 int main(int argc, char *argv[])
 {
-    if (argc < 2) {
-        fprintf(stderr, "skedudle <port> [address]\n");
+    if (argc < 3) {
+        fprintf(stderr, "skedudle <schedule.json> <port> [address]\n");
         exit(1);
     }
 
-    // TODO(#5): schedule.json file is hardcoded
-
-    const char *filepath = "./schedule.json";
+    const char *filepath = argv[1];
+    const char *port_cstr = argv[2];
+    const char *addr = "127.0.0.1";
+    if (argc >= 4) {
+        addr = argv[3];
+    }
 
     Memory json_memory = {0};
     json_memory.capacity = MEMORY_CAPACITY;
@@ -256,7 +259,10 @@ int main(int argc, char *argv[])
     json_scan_schedule(&json_memory, input, &schedule);
     munmap_string(input);
 
-    printf("Schedule timezone: %s\n", schedule.timezone);
+    if (schedule.timezone == NULL) {
+        fprintf(stderr, "Timezone is not provided in the json file\n");
+        exit(1);
+    }
 
     char schedule_timezone[256];
     snprintf(schedule_timezone, 256, ":%s", schedule.timezone);
@@ -267,17 +273,12 @@ int main(int argc, char *argv[])
 
     {
         char *endptr;
-        port = (uint16_t) strtoul(argv[1], &endptr, 10);
+        port = (uint16_t) strtoul(port_cstr, &endptr, 10);
 
-        if (endptr == argv[1]) {
-            fprintf(stderr, "%s is not a port number\n", argv[1]);
+        if (endptr == port_cstr) {
+            fprintf(stderr, "%s is not a port number\n", port_cstr);
             exit(1);
         }
-    }
-
-    const char *addr = "127.0.0.1";
-    if (argc >= 3) {
-        addr = argv[2];
     }
 
     int server_fd = socket(AF_INET, SOCK_STREAM, 0);
