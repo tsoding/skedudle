@@ -152,7 +152,6 @@ int serve_next_stream(int dest_fd, struct Schedule *schedule)
     response_body_start(dest_fd);
 
     time_t current_time = time(NULL) - timezone;
-    time_t id = current_time;   // TODO: id is the time of the start of the event
     struct tm *current_tm = gmtime(&current_time);
 
     // TODO: serve_next_stream does not filter out cancelled events
@@ -161,16 +160,21 @@ int serve_next_stream(int dest_fd, struct Schedule *schedule)
             continue;
         }
 
-        // TODO: starts and ends are in the schedule.json timezone
         if (schedule->projects[i].starts) {
-            time_t starts_time = timegm(schedule->projects[i].starts);
+            time_t starts_time = timegm(schedule->projects[i].starts) - timezone;
             if (current_time < starts_time) continue;
         }
 
         if (schedule->projects[i].ends) {
-            time_t ends_time = timegm(schedule->projects[i].ends);
+            time_t ends_time = timegm(schedule->projects[i].ends) - timezone;
             if (ends_time < current_time) continue;
         }
+
+        struct tm id_tm = *current_tm;
+        id_tm.tm_sec = 0;
+        id_tm.tm_min = schedule->projects[i].time_min % 60;
+        id_tm.tm_hour = schedule->projects[i].time_min / 60;
+        time_t id = timegm(&id_tm) + timezone;
 
         write(dest_fd, "{", 1);
         print_json_string_literal(dest_fd, "id");
