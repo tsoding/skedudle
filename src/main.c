@@ -279,6 +279,8 @@ int main(int argc, char *argv[])
         exit(1);
     }
 
+    printf("Schedule timezone: %s\n", schedule.timezone);
+
     char schedule_timezone[256];
     snprintf(schedule_timezone, 256, ":%s", schedule.timezone);
     setenv("TZ", schedule_timezone, 1);
