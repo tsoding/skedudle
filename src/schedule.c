@@ -129,14 +129,33 @@ void json_scan_projects(const char *str, int str_len,
     }
 }
 
+static
+void json_scan_cancelled_events(const char *str, int str_len,
+                                struct Schedule *schedule)
+{
+    schedule->cancelled_events_count = json_array_len(str, str_len);
+    schedule->cancelled_events = allocator.alloc(
+        schedule->cancelled_events_count * sizeof(time_t));
+
+    struct json_token t;
+    for (int i = 0;
+         json_scanf_array_elem(str, str_len, "", i, &t) > 0;
+         i++)
+    {
+        json_scanf(t.ptr, t.len, "%ld", schedule->cancelled_events + i);
+    }
+}
+
 void json_scan_schedule(String input, struct Schedule *schedule)
 {
     json_scanf(
         input.data, input.len,
         "{"
         "    projects: %M,"
-        "    timezone: %Q"
+        "    timezone: %Q,"
+        "    cancelledEvents: %M"
         "}",
         json_scan_projects, schedule,
-        &schedule->timezone);
+        &schedule->timezone,
+        json_scan_cancelled_events, schedule);
 }

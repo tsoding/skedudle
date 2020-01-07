@@ -22,6 +22,8 @@ struct Schedule
 {
     struct Project *projects;
     size_t projects_size;
+    time_t *cancelled_events;
+    size_t cancelled_events_count;
     const char *timezone;
 };
 

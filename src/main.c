@@ -154,6 +154,8 @@ int serve_next_stream(int dest_fd, struct Schedule *schedule)
     time_t current_time = time(NULL) - timezone;
     struct tm *current_tm = gmtime(&current_time);
 
+    // TODO: serve_next_stream does not filter out cancelled events
+    // TODO: serve_next_stream does not return json of some Event entity
     for (size_t i = 0; i < schedule->projects_size; ++i) {
         if (!(schedule->projects[i].days & (1 << current_tm->tm_wday))) {
             continue;
