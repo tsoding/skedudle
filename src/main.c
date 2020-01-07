@@ -156,7 +156,7 @@ int is_cancelled(struct Schedule *schedule, time_t id)
 }
 
 // TODO(#9): there is no /next_stream endpoint
-// TODO: there is no endpoint to get a schedule for a period
+// TODO(#10): there is no endpoint to get a schedule for a period
 int serve_today_stream(int dest_fd, struct Schedule *schedule)
 {
     response_status_line(dest_fd, 200);
