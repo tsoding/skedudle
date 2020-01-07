@@ -2,7 +2,7 @@ name: CI
 on: [push, pull_request]
 
 jobs:
-  build-linux-ghc:
+  build-linux-gcc:
     runs-on: ubuntu-18.04
     steps:
       - uses: actions/checkout@v1
