@@ -155,10 +155,22 @@ int serve_next_stream(int dest_fd, struct Schedule *schedule)
     struct tm *current_tm = gmtime(&current_time);
 
     for (size_t i = 0; i < schedule->projects_size; ++i) {
-        if (schedule->projects[i].days & (1 << current_tm->tm_wday)) {
-            print_json_string_literal(dest_fd, schedule->projects[i].name);
-            write(dest_fd, "\n", 1);
+        if (!(schedule->projects[i].days & (1 << current_tm->tm_wday))) {
+            continue;
         }
+
+        if (schedule->projects[i].starts) {
+            time_t starts_time = timegm(schedule->projects[i].starts);
+            if (current_time < starts_time) continue;
+        }
+
+        if (schedule->projects[i].ends) {
+            time_t ends_time = timegm(schedule->projects[i].ends);
+            if (ends_time < current_time) continue;
+        }
+
+        print_json_string_literal(dest_fd, schedule->projects[i].name);
+        write(dest_fd, "\n", 1);
     }
 
     return 0;
