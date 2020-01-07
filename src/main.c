@@ -243,7 +243,7 @@ int main(int argc, char *argv[])
         exit(1);
     }
 
-    // TODO: schedule.json file is hardcoded
+    // TODO(#5): schedule.json file is hardcoded
 
     const char *filepath = "./schedule.json";
 
