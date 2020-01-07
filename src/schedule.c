@@ -22,7 +22,21 @@ void json_scan_days(const char *str, int str_len,
     {
         int x;
         json_scanf(t.ptr, t.len, "%d", &x);
-        *days |= 1 << (x - 1);
+        // NOTE:
+        // - schedule.json (1-7, Monday = 1)
+        // - POSIX         (0-6, Sunday = 0)
+        //
+        // the mask is expected to be POSIX compliant.
+        //
+        //     JSON  POSIX
+        //  Mon  1 -> 1
+        //  Tue  2 -> 2
+        //  Wed  3 -> 3
+        //  Thu  4 -> 4
+        //  Fri  5 -> 5
+        //  Sat  6 -> 6
+        //  Sun  7 -> 0
+        *days |= 1 << (x % 7);
     }
 }
 

@@ -154,10 +154,8 @@ int serve_next_stream(int dest_fd, struct Schedule *schedule)
     time_t current_time = time(NULL) - timezone;
     struct tm *current_tm = gmtime(&current_time);
 
-    // TODO(#4): serve_next_stream is unfinished
     for (size_t i = 0; i < schedule->projects_size; ++i) {
-        int x = (current_tm->tm_wday + 6) % 7;
-        if (schedule->projects[i].days & (1 << x)) {
+        if (schedule->projects[i].days & (1 << current_tm->tm_wday)) {
             print_json_string_literal(dest_fd, schedule->projects[i].name);
             write(dest_fd, "\n", 1);
         }
