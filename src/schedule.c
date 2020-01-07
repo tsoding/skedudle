@@ -8,7 +8,7 @@
 
 static
 void json_scan_days(const char *str, int str_len,
-               uint8_t *days)
+                    uint8_t *days)
 {
     assert(str);
     assert(days);
@@ -28,7 +28,7 @@ void json_scan_days(const char *str, int str_len,
 
 static
 void json_scan_time(const char *str, int str_len,
-               int *time_min)
+                    int *time_min)
 {
     assert(str);
     assert(time_min);
@@ -45,6 +45,16 @@ void json_scan_time(const char *str, int str_len,
     *time_min = tm.tm_hour * 60 + tm.tm_min;
 }
 
+void json_scan_date(const char *str, int str_len,
+                    struct tm **tm)
+{
+    *tm = allocator.alloc(sizeof(**tm));
+    char *str_null = allocator.alloc(str_len + 1);
+    memcpy(str_null, str, str_len);
+    str_null[str_len] = '\0';
+    strptime(str_null, "%Y-%m-%d", *tm);
+}
+
 static
 void json_scan_project(const char *str, int str_len,
                        struct Project *project)
@@ -57,14 +67,18 @@ void json_scan_project(const char *str, int str_len,
         "    url: %Q,"
         "    days: %M,"
         "    time: %M,"
-        "    channel: %Q"
+        "    channel: %Q,"
+        "    starts: %M,"
+        "    ends: %M"
         "}",
         &project->name,
         &project->description,
         &project->url,
         json_scan_days, &project->days,
         json_scan_time, &project->time_min,
-        &project->channel);
+        &project->channel,
+        json_scan_date, &project->starts,
+        json_scan_date, &project->ends);
 }
 
 static
@@ -84,12 +98,11 @@ typedef struct {
 
 static
 void json_scan_projects(const char *str, int str_len,
-                        Context* context)
+                        struct Schedule* schedule)
 {
-    context->schedule->projects_size = json_array_len(str, str_len);
-    context->schedule->projects = memory_alloc(
-        context->memory,
-        context->schedule->projects_size * sizeof(struct Project));
+    schedule->projects_size = json_array_len(str, str_len);
+    schedule->projects = allocator.alloc(
+        schedule->projects_size * sizeof(struct Project));
 
     struct json_token t;
     for (int i = 0;
@@ -98,25 +111,18 @@ void json_scan_projects(const char *str, int str_len,
     {
         json_scan_project(
             t.ptr, t.len,
-            context->schedule->projects + i); // this parses thing
+            schedule->projects + i);
     }
 }
 
-void json_scan_schedule(Memory *memory,
-                        String input,
-                        struct Schedule *schedule)
+void json_scan_schedule(String input, struct Schedule *schedule)
 {
-    Context context = {
-        .memory = memory,
-        .schedule = schedule,
-    };
-
     json_scanf(
         input.data, input.len,
         "{"
         "    projects: %M,"
         "    timezone: %Q"
         "}",
-        json_scan_projects, &context,
+        json_scan_projects, schedule,
         &schedule->timezone);
 }

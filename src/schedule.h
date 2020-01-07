@@ -14,6 +14,8 @@ struct Project
     uint8_t days;
     int time_min;
     const char *channel;
+    struct tm *starts;
+    struct tm *ends;
 };
 
 struct Schedule
@@ -23,8 +25,6 @@ struct Schedule
     const char *timezone;
 };
 
-void json_scan_schedule(Memory *memory,
-                        String input,
-                        struct Schedule *schedule);
+void json_scan_schedule(String input, struct Schedule *schedule);
 
 #endif  // SCHEDULE_H_

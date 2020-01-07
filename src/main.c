@@ -236,6 +236,25 @@ void munmap_string(String s)
     munmap((void*) s.data, s.len);
 }
 
+Memory json_memory = {
+    .capacity = MEMORY_CAPACITY
+};
+
+void *json_memory_alloc(size_t size)
+{
+    return memory_alloc(&json_memory, size);
+}
+
+void json_memory_free(void *ptr)
+{
+    (void)ptr;
+}
+
+Allocator allocator = {
+    .alloc = json_memory_alloc,
+    .free = json_memory_free
+};
+
 int main(int argc, char *argv[])
 {
     if (argc < 3) {
@@ -250,13 +269,11 @@ int main(int argc, char *argv[])
         addr = argv[3];
     }
 
-    Memory json_memory = {0};
-    json_memory.capacity = MEMORY_CAPACITY;
-    json_memory.buffer = malloc(MEMORY_CAPACITY);
+    json_memory.buffer = malloc(json_memory.capacity);
 
     String input = mmap_file_to_string(filepath);
     struct Schedule schedule;
-    json_scan_schedule(&json_memory, input, &schedule);
+    json_scan_schedule(input, &schedule);
     munmap_string(input);
 
     if (schedule.timezone == NULL) {
