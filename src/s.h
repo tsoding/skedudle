@@ -36,7 +36,6 @@ String string_empty(void)
 static inline
 String chop_until_char(String *input, char delim)
 {
-    // TODO: is this guard even needed?
     if (input->len == 0) {
         return string_empty();
     }
@@ -87,7 +86,6 @@ String trim_end(String s)
 static inline
 String chop_word(String *input)
 {
-    // TODO: is this guard even needed?
     if (input->len == 0) {
         return string_empty();
     }

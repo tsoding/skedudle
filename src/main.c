@@ -75,7 +75,9 @@ int serve_file(int dest_fd,
 
     off_t offset = 0;
     while (offset < file_stat.st_size) {
-        // TODO: align sendfile chunks according to tcp mem buffer
+        // TODO: Try to align sendfile chunks according to tcp mem buffer
+        //     Will that even improve the performance?
+        //     References:
         //     - http://man7.org/linux/man-pages/man2/sysctl.2.html
         //     - `sysctl -w net.ipv4.tcp_mem='8388608 8388608 8388608'`
         ssize_t n = sendfile(dest_fd, src_fd, &offset, 1024);
