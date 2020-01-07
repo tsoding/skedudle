@@ -145,7 +145,19 @@ int serve_projects_list(int dest_fd, struct Schedule *schedule)
     return 0;
 }
 
-int serve_next_stream(int dest_fd, struct Schedule *schedule)
+int is_cancelled(struct Schedule *schedule, time_t id)
+{
+    for (size_t i = 0; i < schedule->cancelled_events_count; ++i) {
+        if (schedule->cancelled_events[i] == id) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+// TODO: there is no /next_stream endpoint
+// TODO: there is no endpoint to get a schedule for a period
+int serve_today_stream(int dest_fd, struct Schedule *schedule)
 {
     response_status_line(dest_fd, 200);
     response_header(dest_fd, "Content-Type", "application/json");
@@ -154,15 +166,54 @@ int serve_next_stream(int dest_fd, struct Schedule *schedule)
     time_t current_time = time(NULL) - timezone;
     struct tm *current_tm = gmtime(&current_time);
 
-    // TODO(#4): serve_next_stream is unfinished
     for (size_t i = 0; i < schedule->projects_size; ++i) {
-        int x = (current_tm->tm_wday + 6) % 7;
-        if (schedule->projects[i].days & (1 << x)) {
-            print_json_string_literal(dest_fd, schedule->projects[i].name);
-            write(dest_fd, "\n", 1);
+        if (!(schedule->projects[i].days & (1 << current_tm->tm_wday))) {
+            continue;
         }
+
+        if (schedule->projects[i].starts) {
+            time_t starts_time = timegm(schedule->projects[i].starts) - timezone;
+            if (current_time < starts_time) continue;
+        }
+
+        if (schedule->projects[i].ends) {
+            time_t ends_time = timegm(schedule->projects[i].ends) - timezone;
+            if (ends_time < current_time) continue;
+        }
+
+
+        struct tm id_tm = *current_tm;
+        id_tm.tm_sec = 0;
+        id_tm.tm_min = schedule->projects[i].time_min % 60;
+        id_tm.tm_hour = schedule->projects[i].time_min / 60;
+        time_t id = timegm(&id_tm) + timezone;
+
+        if (is_cancelled(schedule, id)) {
+            continue;
+        }
+
+        write(dest_fd, "{", 1);
+        print_json_string_literal(dest_fd, "id");
+        write(dest_fd, ":", 1);
+        dprintf(dest_fd, "%ld", id);
+        write(dest_fd, ",", 1);
+        print_json_string_literal(dest_fd, "title");
+        write(dest_fd, ":", 1);
+        print_json_string_literal(dest_fd, schedule->projects[i].name);
+        write(dest_fd, ",", 1);
+        print_json_string_literal(dest_fd, "description");
+        write(dest_fd, ":", 1);
+        print_json_string_literal(dest_fd, schedule->projects[i].description);
+        write(dest_fd, ",", 1);
+        print_json_string_literal(dest_fd, "url");
+        write(dest_fd, ":", 1);
+        print_json_string_literal(dest_fd, schedule->projects[i].url);
+        write(dest_fd, "}", 1);
+        write(dest_fd, "\n", 1);
+        return 0;
     }
 
+    write(dest_fd, "null", 4);
     return 0;
 }
 
@@ -201,8 +252,8 @@ int handle_request(int fd, struct sockaddr_in *addr, struct Schedule *schedule)
         return serve_projects_list(fd, schedule);
     }
 
-    if (string_equal(status_line.path, SLT("/next_stream"))) {
-        return serve_next_stream(fd, schedule);
+    if (string_equal(status_line.path, SLT("/today_stream"))) {
+        return serve_today_stream(fd, schedule);
     }
 
     return http_error(fd, 404, "Unknown path\n");
@@ -236,6 +287,25 @@ void munmap_string(String s)
     munmap((void*) s.data, s.len);
 }
 
+Memory json_memory = {
+    .capacity = MEMORY_CAPACITY
+};
+
+void *json_memory_alloc(size_t size)
+{
+    return memory_alloc(&json_memory, size);
+}
+
+void json_memory_free(void *ptr)
+{
+    (void)ptr;
+}
+
+Allocator allocator = {
+    .alloc = json_memory_alloc,
+    .free = json_memory_free
+};
+
 int main(int argc, char *argv[])
 {
     if (argc < 3) {
@@ -250,19 +320,19 @@ int main(int argc, char *argv[])
         addr = argv[3];
     }
 
-    Memory json_memory = {0};
-    json_memory.capacity = MEMORY_CAPACITY;
-    json_memory.buffer = malloc(MEMORY_CAPACITY);
+    json_memory.buffer = malloc(json_memory.capacity);
 
     String input = mmap_file_to_string(filepath);
     struct Schedule schedule;
-    json_scan_schedule(&json_memory, input, &schedule);
+    json_scan_schedule(input, &schedule);
     munmap_string(input);
 
     if (schedule.timezone == NULL) {
         fprintf(stderr, "Timezone is not provided in the json file\n");
         exit(1);
     }
+
+    printf("Schedule timezone: %s\n", schedule.timezone);
 
     char schedule_timezone[256];
     snprintf(schedule_timezone, 256, ":%s", schedule.timezone);

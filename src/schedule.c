@@ -8,7 +8,7 @@
 
 static
 void json_scan_days(const char *str, int str_len,
-               uint8_t *days)
+                    uint8_t *days)
 {
     assert(str);
     assert(days);
@@ -22,13 +22,27 @@ void json_scan_days(const char *str, int str_len,
     {
         int x;
         json_scanf(t.ptr, t.len, "%d", &x);
-        *days |= 1 << (x - 1);
+        // NOTE:
+        // - schedule.json (1-7, Monday = 1)
+        // - POSIX         (0-6, Sunday = 0)
+        //
+        // the mask is expected to be POSIX compliant.
+        //
+        //     JSON  POSIX
+        //  Mon  1 -> 1
+        //  Tue  2 -> 2
+        //  Wed  3 -> 3
+        //  Thu  4 -> 4
+        //  Fri  5 -> 5
+        //  Sat  6 -> 6
+        //  Sun  7 -> 0
+        *days |= 1 << (x % 7);
     }
 }
 
 static
 void json_scan_time(const char *str, int str_len,
-               int *time_min)
+                    int *time_min)
 {
     assert(str);
     assert(time_min);
@@ -45,6 +59,16 @@ void json_scan_time(const char *str, int str_len,
     *time_min = tm.tm_hour * 60 + tm.tm_min;
 }
 
+void json_scan_date(const char *str, int str_len,
+                    struct tm **tm)
+{
+    *tm = allocator.alloc(sizeof(**tm));
+    char *str_null = allocator.alloc(str_len + 1);
+    memcpy(str_null, str, str_len);
+    str_null[str_len] = '\0';
+    strptime(str_null, "%Y-%m-%d", *tm);
+}
+
 static
 void json_scan_project(const char *str, int str_len,
                        struct Project *project)
@@ -57,14 +81,18 @@ void json_scan_project(const char *str, int str_len,
         "    url: %Q,"
         "    days: %M,"
         "    time: %M,"
-        "    channel: %Q"
+        "    channel: %Q,"
+        "    starts: %M,"
+        "    ends: %M"
         "}",
         &project->name,
         &project->description,
         &project->url,
         json_scan_days, &project->days,
         json_scan_time, &project->time_min,
-        &project->channel);
+        &project->channel,
+        json_scan_date, &project->starts,
+        json_scan_date, &project->ends);
 }
 
 static
@@ -84,12 +112,11 @@ typedef struct {
 
 static
 void json_scan_projects(const char *str, int str_len,
-                        Context* context)
+                        struct Schedule* schedule)
 {
-    context->schedule->projects_size = json_array_len(str, str_len);
-    context->schedule->projects = memory_alloc(
-        context->memory,
-        context->schedule->projects_size * sizeof(struct Project));
+    schedule->projects_size = json_array_len(str, str_len);
+    schedule->projects = allocator.alloc(
+        schedule->projects_size * sizeof(struct Project));
 
     struct json_token t;
     for (int i = 0;
@@ -98,25 +125,37 @@ void json_scan_projects(const char *str, int str_len,
     {
         json_scan_project(
             t.ptr, t.len,
-            context->schedule->projects + i); // this parses thing
+            schedule->projects + i);
     }
 }
 
-void json_scan_schedule(Memory *memory,
-                        String input,
-                        struct Schedule *schedule)
+static
+void json_scan_cancelled_events(const char *str, int str_len,
+                                struct Schedule *schedule)
 {
-    Context context = {
-        .memory = memory,
-        .schedule = schedule,
-    };
+    schedule->cancelled_events_count = json_array_len(str, str_len);
+    schedule->cancelled_events = allocator.alloc(
+        schedule->cancelled_events_count * sizeof(time_t));
 
+    struct json_token t;
+    for (int i = 0;
+         json_scanf_array_elem(str, str_len, "", i, &t) > 0;
+         i++)
+    {
+        json_scanf(t.ptr, t.len, "%ld", schedule->cancelled_events + i);
+    }
+}
+
+void json_scan_schedule(String input, struct Schedule *schedule)
+{
     json_scanf(
         input.data, input.len,
         "{"
         "    projects: %M,"
-        "    timezone: %Q"
+        "    timezone: %Q,"
+        "    cancelledEvents: %M"
         "}",
-        json_scan_projects, &context,
-        &schedule->timezone);
+        json_scan_projects, schedule,
+        &schedule->timezone,
+        json_scan_cancelled_events, schedule);
 }

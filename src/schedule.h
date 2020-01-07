@@ -14,17 +14,19 @@ struct Project
     uint8_t days;
     int time_min;
     const char *channel;
+    struct tm *starts;
+    struct tm *ends;
 };
 
 struct Schedule
 {
     struct Project *projects;
     size_t projects_size;
+    time_t *cancelled_events;
+    size_t cancelled_events_count;
     const char *timezone;
 };
 
-void json_scan_schedule(Memory *memory,
-                        String input,
-                        struct Schedule *schedule);
+void json_scan_schedule(String input, struct Schedule *schedule);
 
 #endif  // SCHEDULE_H_
