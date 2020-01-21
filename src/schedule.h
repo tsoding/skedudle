@@ -18,12 +18,24 @@ struct Project
     struct tm *ends;
 };
 
+struct Event
+{
+    struct tm date;
+    int time_min;
+    const char *title;
+    const char *description;
+    const char *url;
+    const char *channel;
+};
+
 struct Schedule
 {
     struct Project *projects;
     size_t projects_size;
     time_t *cancelled_events;
     size_t cancelled_events_count;
+    struct Event *extra_events;
+    size_t extra_events_size;
     const char *timezone;
 };
 
