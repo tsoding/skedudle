@@ -157,7 +157,7 @@ int is_cancelled(struct Schedule *schedule, time_t id)
 
 // TODO(#13): schedule does not support patches
 // TODO(#10): there is no endpoint to get a schedule for a period
-// TODO: / should probably return the page of https://tsoding.org/schedule
+// TODO(#14): / should probably return the page of https://tsoding.org/schedule
 //   Which will require to move rest map to somewhere
 
 time_t id_of_event(struct Event event)
