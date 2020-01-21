@@ -1,0 +1,4 @@
+{
+    "projects": "%PROTOCOL%://%HOST%/projects",
+    "today_stream": "%PROTOCOL%://%HOST%/today_stream"
+}

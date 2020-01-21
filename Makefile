@@ -1,6 +1,6 @@
 CFLAGS=-Wall -Wextra -Wno-unused-result -pedantic -std=c11 -I./third_party/frozen/ -ggdb
 CS=src/main.c src/schedule.c
-HS=src/s.h src/request.h src/response.h src/error_page.h src/schedule.h
+HS=src/s.h src/request.h src/response.h src/error_page.h src/schedule.h src/rest_map.h
 LIBS=
 
 all: skedudle frozen_test
@@ -19,3 +19,6 @@ tt: src/tt.c
 
 src/error_page.h: tt src/error_page.h.tt
 	./tt src/error_page.h.tt > src/error_page.h
+
+src/rest_map.h: src/rest_map.h.tt
+	./tt src/rest_map.h.tt > src/rest_map.h

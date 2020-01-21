@@ -217,6 +217,23 @@ int serve_today_stream(int dest_fd, struct Schedule *schedule)
     return 0;
 }
 
+int serve_rest_map(int dest_fd, String host)
+{
+    response_status_line(dest_fd, 200);
+    response_header(dest_fd, "Content-Type", "application/json");
+    response_body_start(dest_fd);
+
+#define OUT dest_fd
+#define HOST print_json_escaped_string(dest_fd, host.data, host.len);
+#define PROTOCOL write(dest_fd, "http", 4);
+#include "rest_map.h"
+#undef OUT
+#undef HOST
+#undef PROTOCOL
+
+    return 0;
+}
+
 int handle_request(int fd, struct sockaddr_in *addr, struct Schedule *schedule)
 {
     assert(addr);
@@ -240,8 +257,20 @@ int handle_request(int fd, struct sockaddr_in *addr, struct Schedule *schedule)
            (int) status_line.method.len, status_line.method.data,
            (int) status_line.path.len, status_line.path.data);
 
+    String host = {0};
+    String header_line = trim(chop_line(&buffer));
+    Header header = {0};
+    while (header_line.len > 0) {
+        header = parse_header(header_line);
+        if (string_equal(header.name, SLT("Host"))) {
+            host = header.value;
+        }
+
+        header_line = trim(chop_line(&buffer));
+    }
+
     if (string_equal(status_line.path, SLT("/"))) {
-        return serve_file(fd, "./index.html", "text/html");
+        return serve_rest_map(fd, host);
     }
 
     if (string_equal(status_line.path, SLT("/favicon.png"))) {
