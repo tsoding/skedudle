@@ -155,68 +155,10 @@ int is_cancelled(struct Schedule *schedule, time_t id)
     return 0;
 }
 
+// TODO: schedule does not support patches
 // TODO(#10): there is no endpoint to get a schedule for a period
 // TODO: / should probably return the page of https://tsoding.org/schedule
 //   Which will require to move rest map to somewhere
-int serve_today_stream(int dest_fd, struct Schedule *schedule)
-{
-    response_status_line(dest_fd, 200);
-    response_header(dest_fd, "Content-Type", "application/json");
-    response_body_start(dest_fd);
-
-    time_t current_time = time(NULL) - timezone;
-    struct tm *current_tm = gmtime(&current_time);
-
-    for (size_t i = 0; i < schedule->projects_size; ++i) {
-        if (!(schedule->projects[i].days & (1 << current_tm->tm_wday))) {
-            continue;
-        }
-
-        if (schedule->projects[i].starts) {
-            time_t starts_time = timegm(schedule->projects[i].starts) - timezone;
-            if (current_time < starts_time) continue;
-        }
-
-        if (schedule->projects[i].ends) {
-            time_t ends_time = timegm(schedule->projects[i].ends) - timezone;
-            if (ends_time < current_time) continue;
-        }
-
-
-        struct tm id_tm = *current_tm;
-        id_tm.tm_sec = 0;
-        id_tm.tm_min = schedule->projects[i].time_min % 60;
-        id_tm.tm_hour = schedule->projects[i].time_min / 60;
-        time_t id = timegm(&id_tm) + timezone;
-
-        if (is_cancelled(schedule, id)) {
-            continue;
-        }
-
-        write(dest_fd, "{", 1);
-        print_json_string_literal(dest_fd, "id");
-        write(dest_fd, ":", 1);
-        dprintf(dest_fd, "%ld", id);
-        write(dest_fd, ",", 1);
-        print_json_string_literal(dest_fd, "title");
-        write(dest_fd, ":", 1);
-        print_json_string_literal(dest_fd, schedule->projects[i].name);
-        write(dest_fd, ",", 1);
-        print_json_string_literal(dest_fd, "description");
-        write(dest_fd, ":", 1);
-        print_json_string_literal(dest_fd, schedule->projects[i].description);
-        write(dest_fd, ",", 1);
-        print_json_string_literal(dest_fd, "url");
-        write(dest_fd, ":", 1);
-        print_json_string_literal(dest_fd, schedule->projects[i].url);
-        write(dest_fd, "}", 1);
-        write(dest_fd, "\n", 1);
-        return 0;
-    }
-
-    write(dest_fd, "null", 4);
-    return 0;
-}
 
 time_t id_of_event(struct Event event)
 {
@@ -392,10 +334,6 @@ int handle_request(int fd, struct sockaddr_in *addr, struct Schedule *schedule)
 
     if (string_equal(status_line.path, SLT("/projects"))) {
         return serve_projects_list(fd, schedule);
-    }
-
-    if (string_equal(status_line.path, SLT("/today_stream"))) {
-        return serve_today_stream(fd, schedule);
     }
 
     if (string_equal(status_line.path, SLT("/next_stream"))) {

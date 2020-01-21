@@ -1,5 +1,4 @@
 {
     "projects": "%PROTOCOL%://%HOST%/projects",
-    "today_stream": "%PROTOCOL%://%HOST%/today_stream",
     "next_stream":  "%PROTOCOL%://%HOST%/next_stream"
 }
