@@ -32,7 +32,7 @@ char request_buffer[REQUEST_BUFFER_CAPACITY];
 void http_error_page_template(int OUT, int code)
 {
 #define INT(x) dprintf(OUT, "%d", x);
-#include "error_page.h"
+#include "error_page_template.h"
 #undef INT
 }
 
@@ -226,7 +226,7 @@ int serve_rest_map(int dest_fd, String host)
 #define OUT dest_fd
 #define HOST print_json_escaped_string(dest_fd, host.data, host.len);
 #define PROTOCOL write(dest_fd, "http", 4);
-#include "rest_map.h"
+#include "rest_map_template.h"
 #undef OUT
 #undef HOST
 #undef PROTOCOL
