@@ -59,14 +59,22 @@ void json_scan_time(const char *str, int str_len,
     *time_min = tm.tm_hour * 60 + tm.tm_min;
 }
 
+static
 void json_scan_date(const char *str, int str_len,
-                    struct tm **tm)
+                    struct tm *tm)
 {
-    *tm = allocator.alloc(sizeof(**tm));
     char *str_null = allocator.alloc(str_len + 1);
     memcpy(str_null, str, str_len);
     str_null[str_len] = '\0';
-    strptime(str_null, "%Y-%m-%d", *tm);
+    strptime(str_null, "%Y-%m-%d", tm);
+}
+
+static
+void json_scan_optional_date(const char *str, int str_len,
+                             struct tm **tm)
+{
+    *tm = allocator.alloc(sizeof(**tm));
+    json_scan_date(str, str_len, *tm);
 }
 
 static
@@ -91,8 +99,8 @@ void json_scan_project(const char *str, int str_len,
         json_scan_days, &project->days,
         json_scan_time, &project->time_min,
         &project->channel,
-        json_scan_date, &project->starts,
-        json_scan_date, &project->ends);
+        json_scan_optional_date, &project->starts,
+        json_scan_optional_date, &project->ends);
 }
 
 static
@@ -146,6 +154,45 @@ void json_scan_cancelled_events(const char *str, int str_len,
     }
 }
 
+static
+void json_scan_event(const char *str, int str_len,
+                     struct Event *event)
+{
+    json_scanf(
+        str, str_len,
+        "{"
+        "    date: %M,"
+        "    time: %M,"
+        "    title: %Q,"
+        "    description: %Q,"
+        "    url: %Q,"
+        "    channel: %Q"
+        "}",
+        json_scan_date, &event->date,
+        json_scan_time, &event->time_min,
+        &event->title,
+        &event->description,
+        &event->url,
+        &event->channel);
+}
+
+static
+void json_scan_extra_events(const char *str, int str_len,
+                            struct Schedule *schedule)
+{
+    schedule->extra_events_size = json_array_len(str, str_len);
+    schedule->extra_events = allocator.alloc(
+        schedule->extra_events_size * sizeof(struct Event));
+
+    struct json_token t;
+    for (int i = 0;
+         json_scanf_array_elem(str, str_len, "", i, &t) > 0;
+         i++)
+    {
+        json_scan_event(t.ptr, t.len, &schedule->extra_events[i]);
+    }
+}
+
 void json_scan_schedule(String input, struct Schedule *schedule)
 {
     json_scanf(
@@ -153,9 +200,11 @@ void json_scan_schedule(String input, struct Schedule *schedule)
         "{"
         "    projects: %M,"
         "    timezone: %Q,"
-        "    cancelledEvents: %M"
+        "    cancelledEvents: %M,"
+        "    extraEvents: %M"
         "}",
         json_scan_projects, schedule,
         &schedule->timezone,
-        json_scan_cancelled_events, schedule);
+        json_scan_cancelled_events, schedule,
+        json_scan_extra_events, schedule);
 }
