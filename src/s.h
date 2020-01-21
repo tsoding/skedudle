@@ -84,6 +84,12 @@ String trim_end(String s)
 }
 
 static inline
+String trim(String s)
+{
+    return trim_begin(trim_end(s));
+}
+
+static inline
 String chop_word(String *input)
 {
     if (input->len == 0) {

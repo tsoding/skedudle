@@ -5,6 +5,6 @@ schedule_test
 frozen_test
 
 # intermediate garbage
-error_page.h
+*_template.h
 *.o
 *.json
