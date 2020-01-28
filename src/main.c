@@ -135,10 +135,24 @@ int serve_projects_list(int dest_fd, struct Schedule *schedule)
     response_header(dest_fd, "Content-Type", "application/json");
     response_body_start(dest_fd);
 
+    time_t current_time = time(NULL) - timezone;
+
     write(dest_fd, "[", 1);
+    int t = 0;
     for (size_t i = 0; i < schedule->projects_size; ++i) {
-        if (i > 0) write(dest_fd, ",", 1);
+        if (schedule->projects[i].starts) {
+            time_t starts_time = timegm(schedule->projects[i].starts) - timezone;
+            if (current_time < starts_time) continue;
+        }
+
+        if (schedule->projects[i].ends) {
+            time_t ends_time = timegm(schedule->projects[i].ends) - timezone;
+            if (ends_time < current_time) continue;
+        }
+
+        if (t) write(dest_fd, ",", 1);
         print_json_string_literal(dest_fd, schedule->projects[i].name);
+        t = 1;
     }
     write(dest_fd, "]\n", 2);
 
