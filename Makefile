@@ -20,5 +20,5 @@ tt: src/tt.c
 src/error_page_template.h: tt src/error_page_template.h.tt
 	./tt src/error_page_template.h.tt > src/error_page_template.h
 
-src/rest_map_template.h: src/rest_map_template.h.tt
+src/rest_map_template.h: tt src/rest_map_template.h.tt
 	./tt src/rest_map_template.h.tt > src/rest_map_template.h
