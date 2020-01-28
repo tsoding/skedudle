@@ -120,4 +120,24 @@ int string_equal(String a, String b)
     return memcmp(a.data, b.data, a.len) == 0;
 }
 
+static inline
+String take(String s, size_t n)
+{
+    if (s.len < n) return s;
+    return (String) {
+        .len = n,
+        .data = s.data
+    };
+}
+
+static inline
+String drop(String s, size_t n)
+{
+    if (s.len < n) return SLT("");
+    return (String) {
+        .len = s.len - n,
+        .data = s.data + n
+    };
+}
+
 #endif  // S_H_
