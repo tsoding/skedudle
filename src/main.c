@@ -257,6 +257,10 @@ int next_event(time_t current_time,
                 continue;
             }
 
+            if (current_time >= event_id) {
+                continue;
+            }
+
             if (result_id < 0 || event_id < result_id) {
                 result = event;
                 result_id = event_id;
