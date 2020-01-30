@@ -53,7 +53,7 @@ static Json_Result parse_json_number(String source)
 
 static Json_Result parse_json_string(Memory *memory, String source)
 {
-    assert(!"TODO: parse_json_string is not implemented");
+    assert(!"TODO(#19): parse_json_string is not implemented");
     return json_error;
 }
 
