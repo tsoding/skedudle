@@ -47,7 +47,7 @@ static Json_Result parse_json_boolean(String source)
 
 static Json_Result parse_json_number(String source)
 {
-    assert(!"TODO: parse_json_number is not implemented");
+    assert(!"TODO(#18): parse_json_number is not implemented");
     return json_error;
 }
 
