@@ -1,10 +1,12 @@
 # binaries
 skedudle
 tt
-schedule_test
-frozen_test
+*_test
 
 # intermediate garbage
 *_template.h
 *.o
 *.json
+
+# vim
+*.swp
