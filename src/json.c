@@ -59,7 +59,7 @@ static Json_Result parse_json_string(Memory *memory, String source)
 
 static Json_Result parse_json_array(Memory *memory, String source)
 {
-    assert(!"TODO: parse_json_array is not implemented");
+    assert(!"TODO(#20): parse_json_array is not implemented");
     return json_error;
 }
 
