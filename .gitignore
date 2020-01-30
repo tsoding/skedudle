@@ -7,3 +7,6 @@ tt
 *_template.h
 *.o
 *.json
+
+# vim
+*.swp
