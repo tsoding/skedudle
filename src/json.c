@@ -142,15 +142,15 @@ void print_json_number(FILE *stream, double number)
 
 static
 int json_get_utf8_char_len(unsigned char ch) {
-  if ((ch & 0x80) == 0) return 1;
-  switch (ch & 0xf0) {
-    case 0xf0:
-      return 4;
-    case 0xe0:
-      return 3;
-    default:
-      return 2;
-  }
+    if ((ch & 0x80) == 0) return 1;
+    switch (ch & 0xf0) {
+        case 0xf0:
+            return 4;
+        case 0xe0:
+            return 3;
+        default:
+            return 2;
+    }
 }
 
 static
