@@ -44,7 +44,7 @@ struct Json_Value {
 typedef struct {
     Json_Value value;
     String rest;
-    // TODO: error reporting in Json_Result is very poor
+    // TODO(#22): error reporting in Json_Result is very poor
     int is_error;
 } Json_Result;
 
