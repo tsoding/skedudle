@@ -45,51 +45,27 @@ static Json_Result parse_json_boolean(String source)
     return json_error;
 }
 
-static Json_Result parse_integer(String source)
-{
-    return json_error;
-}
-
-static Json_Result parse_fraction(String source)
-{
-    return json_error;
-}
-
-static Json_Result parse_exponent(String source)
-{
-    return json_error;
-}
-
 static Json_Result parse_json_number(String source)
 {
-    Json_Result result = parse_integer(source);
-    if (result.is_error) return result;
-    double integer = result.value.number;
-
-    result = parse_fraction(result.rest);
-    double fraction = result.is_error ? 0.0 : result.value.number; // < 1.0
-
-    result = parse_exponent(result.rest);
-    double exponent = result.is_error ? 0.0 : result.value.number;
-
-    return (Json_Result) {
-        // TODO: probably introduces a lot of inaccuracies
-        .value = json_number((integer + fraction) * pow(10, exponent))
-    };
+    assert(!"TODO: parse_json_number is not implemented");
+    return json_error;
 }
 
 static Json_Result parse_json_string(Memory *memory, String source)
 {
+    assert(!"TODO: parse_json_string is not implemented");
     return json_error;
 }
 
 static Json_Result parse_json_array(Memory *memory, String source)
 {
+    assert(!"TODO: parse_json_array is not implemented");
     return json_error;
 }
 
 static Json_Result parse_json_object(Memory *memory, String source)
 {
+    assert(!"TODO: parse_json_object is not implemented");
     return json_error;
 }
 
