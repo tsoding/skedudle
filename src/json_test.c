@@ -13,9 +13,18 @@ int main(int argc, char *argv[])
 
     assert(memory.buffer);
 
-    Json_Result result = parse_json_value(&memory, SLT("null"));
-    assert(!result.is_error);
-    print_json_value(stdout, result.value);
+    String tests[] = {
+        SLT("null"),
+        SLT("true"),
+        SLT("false")
+    };
+    size_t tests_count = sizeof(tests) / sizeof(tests[0]);
+
+    for (size_t i = 0; i < tests_count; ++i) {
+        Json_Result result = parse_json_value(&memory, tests[i]);
+        assert(!result.is_error);
+        print_json_value(stdout, result.value); printf("\n");
+    }
 
     free(memory.buffer);
 
