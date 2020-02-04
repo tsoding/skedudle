@@ -100,7 +100,7 @@ static Json_Result parse_json_boolean(String source)
 
 static Json_Result parse_json_number(String source)
 {
-    // TODO: refactor parse_json_number with chop
+    // TODO(#28): refactor parse_json_number with chop
     String source_trimmed = trim_begin(source);
 
     String integer = {0};
