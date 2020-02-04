@@ -140,4 +140,10 @@ String drop(String s, size_t n)
     };
 }
 
+static inline
+void chop(String *s, size_t n)
+{
+    *s = drop(*s, n);
+}
+
 #endif  // S_H_
