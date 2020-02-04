@@ -11,9 +11,57 @@ static Json_Value json_number(double value)
     };
 }
 
+int64_t stoi64(String integer)
+{
+    if (integer.len == 0) {
+        return 0;
+    }
+
+    int64_t result = 0;
+    int64_t sign = 1;
+
+    if (*integer.data == '-') {
+        sign = -1;
+        integer.data += 1;
+        integer.len  -= 1;
+    }
+
+    while (integer.len) {
+        assert(isdigit(*integer.data));
+        result = result * 10 + (*integer.data - '0');
+        integer.data += 1;
+        integer.len  -= 1;
+    }
+
+    return result * sign;
+}
+
 int64_t json_number_to_integer(Json_Number number)
 {
-    return 0;
+    int64_t exponent = stoi64(number.exponent);
+    int64_t result = stoi64(number.integer);
+
+    if (exponent > 0) {
+        int64_t sign = result >= 0 ? 1 : -1;
+
+        for (; exponent > 0; exponent -= 1) {
+            int64_t x = 0;
+
+            if (number.fraction.len) {
+                x = *number.fraction.data - '0';
+                number.fraction.data += 1;
+                number.fraction.len -= 1;
+            }
+
+            result = result * 10 + sign * x;
+        }
+    }
+
+    for (; exponent < 0 && result; exponent += 1) {
+        result /= 10;
+    }
+
+    return result;
 }
 
 static Json_Result json_error = { .is_error = 1 };
