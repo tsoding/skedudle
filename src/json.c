@@ -11,6 +11,11 @@ static Json_Value json_number(double value)
     };
 }
 
+int64_t json_number_to_integer(Json_Number number)
+{
+    return 0;
+}
+
 static Json_Result json_error = { .is_error = 1 };
 
 static Json_Result parse_token(String source, String token, Json_Value value)
@@ -47,8 +52,74 @@ static Json_Result parse_json_boolean(String source)
 
 static Json_Result parse_json_number(String source)
 {
-    assert(!"TODO(#18): parse_json_number is not implemented");
-    return json_error;
+    String source_trimmed = trim_begin(source);
+
+    String integer = {0};
+    String fraction = {0};
+    String exponent = {0};
+
+    integer.data = source_trimmed.data;
+
+    if (source_trimmed.len && *source_trimmed.data == '-') {
+        integer.len += 1;
+        source_trimmed.data += 1;
+        source_trimmed.len  -= 1;
+    }
+
+    while (source_trimmed.len && isdigit(*source_trimmed.data)) {
+        integer.len += 1;
+        source_trimmed.data += 1;
+        source_trimmed.len  -= 1;
+    }
+
+    if (integer.len == 0 || string_equal(integer, SLT("-"))) {
+        return json_error;
+    }
+
+    if (source_trimmed.len && *source_trimmed.data == '.') {
+        source_trimmed.data += 1;
+        source_trimmed.len  -= 1;
+        fraction.data = source_trimmed.data;
+
+        while (source_trimmed.len && isdigit(*source_trimmed.data)) {
+            fraction.len  += 1;
+            source_trimmed.data += 1;
+            source_trimmed.len  -= 1;
+        }
+    }
+
+    if (source_trimmed.len && tolower(*source_trimmed.data) == 'e') {
+        source_trimmed.data += 1;
+        source_trimmed.len  -= 1;
+        exponent.data = source_trimmed.data;
+
+        if (source_trimmed.len && *source_trimmed.data == '-') {
+            exponent.len  += 1;
+            source_trimmed.data += 1;
+            source_trimmed.len  -= 1;
+        }
+
+        while (source_trimmed.len && isdigit(*source_trimmed.data)) {
+            exponent.len  += 1;
+            source_trimmed.data += 1;
+            source_trimmed.len  -= 1;
+        }
+
+        if (exponent.len == 0 || string_equal(exponent, SLT("-"))) {
+            return json_error;
+        }
+    }
+
+    return (Json_Result) {
+        .value = {
+            .type = JSON_NUMBER,
+            .number = {
+                .integer = integer,
+                .fraction = fraction,
+                .exponent = exponent
+            }
+        }
+    };
 }
 
 static Json_Result parse_json_string(Memory *memory, String source)
@@ -111,9 +182,19 @@ void print_json_boolean(FILE *stream, int boolean)
 }
 
 static
-void print_json_number(FILE *stream, double number)
+void print_json_number(FILE *stream, Json_Number number)
 {
-    fprintf(stream, "%lf", number);
+    fwrite(number.integer.data, 1, number.integer.len, stream);
+
+    if (number.fraction.len > 0) {
+        fputc('.', stream);
+        fwrite(number.fraction.data, 1, number.fraction.len, stream);
+    }
+
+    if (number.exponent.len > 0) {
+        fputc('e', stream);
+        fwrite(number.exponent.data, 1, number.exponent.len, stream);
+    }
 }
 
 static

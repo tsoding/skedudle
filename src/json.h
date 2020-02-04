@@ -29,12 +29,21 @@ typedef struct {
     Json_Value *values;
 } Json_Object;
 
+typedef struct {
+    // TODO: because of the use of String-s Json_Number can hold an incorrect value
+    String integer;
+    String fraction;
+    String exponent;
+} Json_Number;
+
+int64_t json_number_to_integer(Json_Number number);
+
 struct Json_Value {
     Json_Type type;
     union
     {
         int boolean;
-        double number;
+        Json_Number number;
         String string;
         Json_Array array;
         Json_Object object;
