@@ -30,7 +30,9 @@ typedef struct {
 } Json_Object;
 
 typedef struct {
-    // TODO: because of the use of String-s Json_Number can hold an incorrect value
+    // TODO(#26): because of the use of String-s Json_Number can hold an incorrect value
+    //   But you can only get an incorrect Json_Number if you construct it yourself.
+    //   Anything coming from parse_json_value should be always a correct number.
     String integer;
     String fraction;
     String exponent;
