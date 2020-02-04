@@ -242,7 +242,7 @@ static Json_Result parse_json_string(Memory *memory, String source)
 
             if (unescaped) continue;
 
-            // TODO: parse_json_string does not support \u
+            // TODO(#29): parse_json_string does not support \u
             buffer[buffer_size++] = result.value.string.data[i + 1];
         } else {
             buffer[buffer_size++] = result.value.string.data[i];
