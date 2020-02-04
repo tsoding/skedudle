@@ -100,6 +100,7 @@ static Json_Result parse_json_boolean(String source)
 
 static Json_Result parse_json_number(String source)
 {
+    // TODO(#28): refactor parse_json_number with chop
     String source_trimmed = trim_begin(source);
 
     String integer = {0};
@@ -170,10 +171,93 @@ static Json_Result parse_json_number(String source)
     };
 }
 
+static Json_Result parse_json_string_literal(String source)
+{
+    String source_trimmed = trim_begin(source);
+
+    if (source_trimmed.len == 0 || *source_trimmed.data != '"') {
+        return json_error;
+    }
+
+    chop(&source_trimmed, 1);
+
+    String s = {
+        .data = source_trimmed.data,
+        .len = 0
+    };
+
+    int escape = 0;
+    while (source_trimmed.len && (*source_trimmed.data != '"' || escape)) {
+        escape = 0;
+        if (*source_trimmed.data == '\\') {
+            escape = 1;
+        }
+
+        s.len++;
+        chop(&source_trimmed, 1);
+    }
+
+    if (source_trimmed.len == 0) {
+        return json_error;
+    }
+
+    chop(&source_trimmed, 1);
+
+    return (Json_Result) {
+        .value = {
+            .type = JSON_STRING,
+            .string = s
+        }
+    };
+}
+
 static Json_Result parse_json_string(Memory *memory, String source)
 {
-    assert(!"TODO(#19): parse_json_string is not implemented");
-    return json_error;
+    Json_Result result = parse_json_string_literal(source);
+    if (result.is_error) return result;
+    assert(result.value.type == JSON_STRING);
+
+    char *buffer = memory_alloc(memory, result.value.string.len);
+    size_t buffer_size = 0;
+
+    static char unescape_map[][2] = {
+        {'b', '\b'},
+        {'f', '\f'},
+        {'n', '\n'},
+        {'r', '\r'},
+        {'t', '\t'},
+    };
+    static const size_t unescape_map_size = sizeof(unescape_map) / sizeof(unescape_map[0]);
+
+    for (size_t i = 0; i < result.value.string.len; ++i) {
+        if (result.value.string.data[i] == '\\' && i + 1 < result.value.string.len) {
+            int unescaped = 0;
+            for (size_t j = 0; j < unescape_map_size; ++j) {
+                if (unescape_map[j][0] == result.value.string.data[i + 1]) {
+                    buffer[buffer_size++] = unescape_map[j][1];
+                    unescaped = 1;
+                    break;
+                }
+            }
+
+            if (unescaped) continue;
+
+            // TODO(#29): parse_json_string does not support \u
+            buffer[buffer_size++] = result.value.string.data[i + 1];
+        } else {
+            buffer[buffer_size++] = result.value.string.data[i];
+        }
+    }
+
+    return (Json_Result) {
+        .value = {
+            .type = JSON_STRING,
+            .string = {
+                .data = buffer,
+                .len = buffer_size
+            }
+        }
+    };
 }
 
 static Json_Result parse_json_array(Memory *memory, String source)
@@ -265,6 +349,7 @@ void print_json_string(FILE *stream, String string)
     const char *specials = "btnvfr";
     const char *p = string.data;
 
+    fputc('"', stream);
     size_t cl;
     for (size_t i = 0; i < string.len; i++) {
         unsigned char ch = ((unsigned char *) p)[i];
@@ -285,6 +370,7 @@ void print_json_string(FILE *stream, String string)
             i += cl - 1;
         }
     }
+    fputc('"', stream);
 }
 
 static
