@@ -23,7 +23,7 @@ int main(int argc, char *argv[])
         SLT("10.10"),
         SLT("-10.10e2"),
         SLT("-10.10e-2"),
-        // TODO: parse_json_number treats -10.-10e-2 as two separate numbers
+        // TODO(#25): parse_json_number treats -10.-10e-2 as two separate numbers
         SLT("-10.-10e-2"),
     };
     size_t tests_count = sizeof(tests) / sizeof(tests[0]);
