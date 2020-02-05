@@ -100,7 +100,6 @@ static Json_Result parse_json_boolean(String source)
 
 static Json_Result parse_json_number(String source)
 {
-    // TODO(#28): refactor parse_json_number with chop
     String source_trimmed = trim_begin(source);
 
     String integer = {0};
@@ -111,14 +110,12 @@ static Json_Result parse_json_number(String source)
 
     if (source_trimmed.len && *source_trimmed.data == '-') {
         integer.len += 1;
-        source_trimmed.data += 1;
-        source_trimmed.len  -= 1;
+        chop(&source_trimmed, 1);
     }
 
     while (source_trimmed.len && isdigit(*source_trimmed.data)) {
         integer.len += 1;
-        source_trimmed.data += 1;
-        source_trimmed.len  -= 1;
+        chop(&source_trimmed, 1);
     }
 
     if (integer.len == 0 || string_equal(integer, SLT("-"))) {
@@ -126,32 +123,27 @@ static Json_Result parse_json_number(String source)
     }
 
     if (source_trimmed.len && *source_trimmed.data == '.') {
-        source_trimmed.data += 1;
-        source_trimmed.len  -= 1;
+        chop(&source_trimmed, 1);
         fraction.data = source_trimmed.data;
 
         while (source_trimmed.len && isdigit(*source_trimmed.data)) {
             fraction.len  += 1;
-            source_trimmed.data += 1;
-            source_trimmed.len  -= 1;
+            chop(&source_trimmed, 1);
         }
     }
 
     if (source_trimmed.len && tolower(*source_trimmed.data) == 'e') {
-        source_trimmed.data += 1;
-        source_trimmed.len  -= 1;
+        chop(&source_trimmed, 1);
         exponent.data = source_trimmed.data;
 
         if (source_trimmed.len && *source_trimmed.data == '-') {
             exponent.len  += 1;
-            source_trimmed.data += 1;
-            source_trimmed.len  -= 1;
+            chop(&source_trimmed, 1);
         }
 
         while (source_trimmed.len && isdigit(*source_trimmed.data)) {
             exponent.len  += 1;
-            source_trimmed.data += 1;
-            source_trimmed.len  -= 1;
+            chop(&source_trimmed, 1);
         }
 
         if (exponent.len == 0 || string_equal(exponent, SLT("-"))) {
