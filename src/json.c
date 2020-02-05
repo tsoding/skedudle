@@ -22,15 +22,13 @@ int64_t stoi64(String integer)
 
     if (*integer.data == '-') {
         sign = -1;
-        integer.data += 1;
-        integer.len  -= 1;
+        chop(&integer, 1);
     }
 
     while (integer.len) {
         assert(isdigit(*integer.data));
         result = result * 10 + (*integer.data - '0');
-        integer.data += 1;
-        integer.len  -= 1;
+        chop(&integer, 1);
     }
 
     return result * sign;
@@ -49,8 +47,7 @@ int64_t json_number_to_integer(Json_Number number)
 
             if (number.fraction.len) {
                 x = *number.fraction.data - '0';
-                number.fraction.data += 1;
-                number.fraction.len -= 1;
+                chop(&number.fraction, 1);
             }
 
             result = result * 10 + sign * x;
