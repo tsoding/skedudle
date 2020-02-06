@@ -156,7 +156,8 @@ static Json_Result parse_json_number(String source)
                 .fraction = fraction,
                 .exponent = exponent
             }
-        }
+        },
+        .rest = source_trimmed
     };
 }
 
@@ -196,7 +197,8 @@ static Json_Result parse_json_string_literal(String source)
         .value = {
             .type = JSON_STRING,
             .string = s
-        }
+        },
+        .rest = source_trimmed
     };
 }
 
@@ -244,14 +246,83 @@ static Json_Result parse_json_string(Memory *memory, String source)
             .string = {
                 .data = buffer,
                 .len = buffer_size
-            }
-        }
+            },
+        },
+        .rest = result.rest
     };
 }
 
 static Json_Result parse_json_array(Memory *memory, String source)
 {
-    assert(!"TODO(#20): parse_json_array is not implemented");
+    String source_trimmed = trim_begin(source);
+
+    if(source_trimmed.len == 0 || *source_trimmed.data != '[') {
+        return json_error;
+    }
+
+    chop(&source_trimmed, 1);
+
+    source_trimmed = trim_begin(source_trimmed);
+
+    if (source_trimmed.len == 0) {
+        return json_error;
+    } else if(*source_trimmed.data == ']') {
+        return (Json_Result) {
+            .value = {
+                .type = JSON_ARRAY,
+                .array = {
+                    .size = 0,
+                    .elements = NULL
+                },
+            },
+            .rest = drop(source_trimmed, 1)
+        };
+    }
+
+    Json_Value *elements = NULL;
+    size_t elements_size = 0;
+
+    while(source_trimmed.len > 0) {
+        Json_Result item_result = parse_json_value(memory, source_trimmed);
+        if(item_result.is_error) {
+            return item_result;
+        }
+
+        if(elements == NULL) {
+            elements = memory_alloc(memory, sizeof(Json_Result));
+            elements_size = 1;
+        } else {
+            elements = memory_realloc(
+                memory,
+                elements,
+                elements_size * sizeof(Json_Result),
+                (elements_size + 1) * sizeof(Json_Result));
+                
+                elements_size++;
+        }
+
+        elements[elements_size - 1] = item_result.value;
+
+        source_trimmed = trim_begin(item_result.rest);
+
+        if(*source_trimmed.data == ']') {
+            return (Json_Result) {
+                .value = {
+                    .type = JSON_ARRAY,
+                    .array = {
+                        .size = elements_size,
+                        .elements = elements
+                    }
+                },
+                .rest = drop(source_trimmed, 1)
+            };
+        } else if (*source_trimmed.data == ',') {
+            source_trimmed = trim_begin(drop(source_trimmed, 1));
+        } else {
+            return json_error;
+        }
+    }
+
     return json_error;
 }
 
