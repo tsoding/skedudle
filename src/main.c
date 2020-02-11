@@ -129,36 +129,6 @@ void print_json_string_literal(int fd, const char *literal)
     write(fd, "\"", 1);
 }
 
-int serve_projects_list(int dest_fd, struct Schedule *schedule)
-{
-    response_status_line(dest_fd, 200);
-    response_header(dest_fd, "Content-Type", "application/json");
-    response_body_start(dest_fd);
-
-    time_t current_time = time(NULL) - timezone;
-
-    write(dest_fd, "[", 1);
-    int t = 0;
-    for (size_t i = 0; i < schedule->projects_size; ++i) {
-        if (schedule->projects[i].starts) {
-            time_t starts_time = timegm(schedule->projects[i].starts) - timezone;
-            if (current_time < starts_time) continue;
-        }
-
-        if (schedule->projects[i].ends) {
-            time_t ends_time = timegm(schedule->projects[i].ends) - timezone;
-            if (ends_time < current_time) continue;
-        }
-
-        if (t) write(dest_fd, ",", 1);
-        print_json_string_literal(dest_fd, schedule->projects[i].name);
-        t = 1;
-    }
-    write(dest_fd, "]\n", 2);
-
-    return 0;
-}
-
 int is_cancelled(struct Schedule *schedule, time_t id)
 {
     for (size_t i = 0; i < schedule->cancelled_events_count; ++i) {
@@ -348,10 +318,6 @@ int handle_request(int fd, struct sockaddr_in *addr, struct Schedule *schedule)
 
     if (string_equal(status_line.path, SLT("/favicon.png"))) {
         return serve_file(fd, "./favicon.png", "image/png");
-    }
-
-    if (string_equal(status_line.path, SLT("/projects"))) {
-        return serve_projects_list(fd, schedule);
     }
 
     if (string_equal(status_line.path, SLT("/next_stream"))) {
