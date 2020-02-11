@@ -11,6 +11,30 @@ static Json_Value json_number(double value)
     };
 }
 
+void json_array_push(Memory *memory, Json_Array *array, Json_Value value)
+{
+    assert(memory);
+    assert(array);
+
+    if (array->begin == NULL) {
+        assert(array->end == NULL);
+        array->begin = memory_alloc(memory, sizeof(Json_Array_Page));
+        array->end = array->begin;
+        memset(array->begin, 0, sizeof(Json_Array_Page));
+    }
+
+    if (array->end->size >= JSON_ARRAY_PAGE_CAPACITY) {
+        Json_Array_Page *next = memory_alloc(memory, sizeof(Json_Array_Page));
+        memset(next, 0, sizeof(Json_Array_Page));
+        array->end->next = next;
+        array->end = next;
+    }
+
+    assert(array->end->size < JSON_ARRAY_PAGE_CAPACITY);
+
+    array->end->elements[array->end->size++] = value;
+}
+
 int64_t stoi64(String integer)
 {
     if (integer.len == 0) {
@@ -156,7 +180,8 @@ static Json_Result parse_json_number(String source)
                 .fraction = fraction,
                 .exponent = exponent
             }
-        }
+        },
+        .rest = source_trimmed
     };
 }
 
@@ -196,7 +221,8 @@ static Json_Result parse_json_string_literal(String source)
         .value = {
             .type = JSON_STRING,
             .string = s
-        }
+        },
+        .rest = source_trimmed
     };
 }
 
@@ -244,14 +270,69 @@ static Json_Result parse_json_string(Memory *memory, String source)
             .string = {
                 .data = buffer,
                 .len = buffer_size
-            }
-        }
+            },
+        },
+        .rest = result.rest
     };
 }
 
 static Json_Result parse_json_array(Memory *memory, String source)
 {
-    assert(!"TODO(#20): parse_json_array is not implemented");
+    String source_trimmed = trim_begin(source);
+
+    if(source_trimmed.len == 0 || *source_trimmed.data != '[') {
+        return json_error;
+    }
+
+    chop(&source_trimmed, 1);
+
+    source_trimmed = trim_begin(source_trimmed);
+
+    if (source_trimmed.len == 0) {
+        return json_error;
+    } else if(*source_trimmed.data == ']') {
+        return (Json_Result) {
+            .value = {
+                .type = JSON_ARRAY,
+                .array = {
+                    .begin = NULL,
+                    .end = NULL
+                },
+            },
+            .rest = drop(source_trimmed, 1)
+        };
+    }
+
+    Json_Array array = {
+        .begin = NULL,
+        .end = NULL
+    };
+
+    while(source_trimmed.len > 0) {
+        Json_Result item_result = parse_json_value(memory, source_trimmed);
+        if(item_result.is_error) {
+            return item_result;
+        }
+
+        json_array_push(memory, &array, item_result.value);
+
+        source_trimmed = trim_begin(item_result.rest);
+
+        if(*source_trimmed.data == ']') {
+            return (Json_Result) {
+                .value = {
+                    .type = JSON_ARRAY,
+                    .array = array
+                },
+                .rest = drop(source_trimmed, 1)
+            };
+        } else if (*source_trimmed.data == ',') {
+            source_trimmed = trim_begin(drop(source_trimmed, 1));
+        } else {
+            return json_error;
+        }
+    }
+
     return json_error;
 }
 
@@ -366,9 +447,16 @@ static
 void print_json_array(FILE *stream, Json_Array array)
 {
     fprintf(stream, "[");
-    for (size_t i = 0; i < array.size; ++i) {
-        if (i > 0) fprintf(stream, ",");
-        print_json_value(stream, array.elements[i]);
+    int t = 0;
+    for (Json_Array_Page *page = array.begin; page != NULL; page = page->next) {
+        for (size_t i = 0; i < page->size; ++i) {
+            if (t) {
+                printf(",");
+            } else {
+                t = 1;
+            }
+            print_json_value(stream, page->elements[i]);
+        }
     }
     fprintf(stream, "]");
 }
