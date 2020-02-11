@@ -30,6 +30,7 @@ int main(int argc, char *argv[])
         SLT("[1]"),
         SLT("[\"test\"]"),
         SLT("[1,2,3]"),
+        SLT("[1,2,3 5]"),
         SLT("[\"hello,\tworld\", 123, \t \"abcd\", -10.10e-2, \"test\"]"),
         SLT("[[]]"),
         SLT("[123,[321,\"test\"],\"abcd\"]")
@@ -38,7 +39,18 @@ int main(int argc, char *argv[])
 
     for (size_t i = 0; i < tests_count; ++i) {
         Json_Result result = parse_json_value(&memory, tests[i]);
-        assert(!result.is_error);
+        if (result.is_error) {
+            fwrite(tests[i].data, 1, tests[i].len, stdout); fputc('\n', stdout);
+            size_t n = result.rest.data - tests[i].data;
+            for (size_t j = 0; j < n; ++j) {
+                fputc(' ', stdout);
+            }
+            fputc('^', stdout);
+            fputc('\n', stdout);
+
+            fputs(result.message, stdout);
+            fputc('\n', stdout);
+        }
         print_json_value(stdout, result.value); fputc('\n', stdout);
     }
 

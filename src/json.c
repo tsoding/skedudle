@@ -85,90 +85,81 @@ int64_t json_number_to_integer(Json_Number number)
     return result;
 }
 
-static Json_Result json_error = { .is_error = 1 };
-
-static Json_Result parse_token(String source, String token, Json_Value value)
+static Json_Result parse_token(String source, String token,
+                               Json_Value value,
+                               const char *message)
 {
-    String source_trimmed = trim_begin(source);
-
-    if (string_equal(take(source_trimmed, token.len), token)) {
+    if (string_equal(take(source, token.len), token)) {
         return (Json_Result) {
-            .rest = drop(source_trimmed, token.len),
+            .rest = drop(source, token.len),
             .value = value
         };
     }
 
-    return json_error;
-}
-
-static Json_Result parse_json_null(String source)
-{
-    return parse_token(source, SLT("null"), json_null);
-}
-
-static Json_Result parse_json_boolean(String source)
-{
-    Json_Result result;
-
-    result = parse_token(source, SLT("true"), json_true);
-    if (!result.is_error) return result;
-
-    result = parse_token(source, SLT("false"), json_false);
-    if (!result.is_error) return result;
-
-    return json_error;
+    return (Json_Result) {
+        .is_error = 1,
+        .message = message,
+        .rest = source
+    };
 }
 
 static Json_Result parse_json_number(String source)
 {
-    String source_trimmed = trim_begin(source);
-
     String integer = {0};
     String fraction = {0};
     String exponent = {0};
 
-    integer.data = source_trimmed.data;
+    integer.data = source.data;
 
-    if (source_trimmed.len && *source_trimmed.data == '-') {
+    if (source.len && *source.data == '-') {
         integer.len += 1;
-        chop(&source_trimmed, 1);
+        chop(&source, 1);
     }
 
-    while (source_trimmed.len && isdigit(*source_trimmed.data)) {
+    while (source.len && isdigit(*source.data)) {
         integer.len += 1;
-        chop(&source_trimmed, 1);
+        chop(&source, 1);
     }
 
+    // TODO: empty integer with fraction is not taken into account
     if (integer.len == 0 || string_equal(integer, SLT("-"))) {
-        return json_error;
+        return (Json_Result) {
+            .is_error = 1,
+            .rest = source,
+            .message = "Incorrect number literal"
+        };
     }
 
-    if (source_trimmed.len && *source_trimmed.data == '.') {
-        chop(&source_trimmed, 1);
-        fraction.data = source_trimmed.data;
+    if (source.len && *source.data == '.') {
+        chop(&source, 1);
+        fraction.data = source.data;
 
-        while (source_trimmed.len && isdigit(*source_trimmed.data)) {
+        while (source.len && isdigit(*source.data)) {
             fraction.len  += 1;
-            chop(&source_trimmed, 1);
+            chop(&source, 1);
         }
     }
 
-    if (source_trimmed.len && tolower(*source_trimmed.data) == 'e') {
-        chop(&source_trimmed, 1);
-        exponent.data = source_trimmed.data;
+    if (source.len && tolower(*source.data) == 'e') {
+        chop(&source, 1);
+        exponent.data = source.data;
 
-        if (source_trimmed.len && *source_trimmed.data == '-') {
+        if (source.len && *source.data == '-') {
             exponent.len  += 1;
-            chop(&source_trimmed, 1);
+            chop(&source, 1);
         }
 
-        while (source_trimmed.len && isdigit(*source_trimmed.data)) {
+        while (source.len && isdigit(*source.data)) {
             exponent.len  += 1;
-            chop(&source_trimmed, 1);
+            chop(&source, 1);
         }
 
         if (exponent.len == 0 || string_equal(exponent, SLT("-"))) {
-            return json_error;
+            return (Json_Result) {
+                .is_error = 1,
+                .rest = source,
+                .message = "Incorrect number literal"
+            };
         }
     }
 
@@ -181,48 +172,54 @@ static Json_Result parse_json_number(String source)
                 .exponent = exponent
             }
         },
-        .rest = source_trimmed
+        .rest = source
     };
 }
 
 static Json_Result parse_json_string_literal(String source)
 {
-    String source_trimmed = trim_begin(source);
-
-    if (source_trimmed.len == 0 || *source_trimmed.data != '"') {
-        return json_error;
+    if (source.len == 0 || *source.data != '"') {
+        return (Json_Result) {
+            .is_error = 1,
+            .rest = source,
+            .message = "Expected '\"'",
+        };
     }
 
-    chop(&source_trimmed, 1);
+    chop(&source, 1);
 
     String s = {
-        .data = source_trimmed.data,
+        .data = source.data,
         .len = 0
     };
 
     int escape = 0;
-    while (source_trimmed.len && (*source_trimmed.data != '"' || escape)) {
+    while (source.len && (*source.data != '"' || escape)) {
         escape = 0;
-        if (*source_trimmed.data == '\\') {
+        if (*source.data == '\\') {
             escape = 1;
         }
 
         s.len++;
-        chop(&source_trimmed, 1);
+        chop(&source, 1);
     }
 
-    if (source_trimmed.len == 0) {
-        return json_error;
+    if (source.len == 0) {
+        return (Json_Result) {
+            .is_error = 1,
+            .rest = source,
+            .message = "Expected '\"'",
+        };
     }
 
-    chop(&source_trimmed, 1);
+    chop(&source, 1);
 
     return (Json_Result) {
         .value = {
             .type = JSON_STRING,
             .string = s
         },
-        .rest = source_trimmed
+        .rest = source
     };
 }
 
@@ -278,19 +275,25 @@ static Json_Result parse_json_string(Memory *memory, String source)
 
 static Json_Result parse_json_array(Memory *memory, String source)
 {
-    String source_trimmed = trim_begin(source);
-
-    if(source_trimmed.len == 0 || *source_trimmed.data != '[') {
-        return json_error;
+    if(source.len == 0 || *source.data != '[') {
+        return (Json_Result) {
+            .is_error = 1,
+            .rest = source,
+            .message = "Expected '['",
+        };
     }
 
-    chop(&source_trimmed, 1);
+    chop(&source, 1);
 
-    source_trimmed = trim_begin(source_trimmed);
+    source = trim_begin(source);
 
-    if (source_trimmed.len == 0) {
-        return json_error;
-    } else if(*source_trimmed.data == ']') {
+    if (source.len == 0) {
+        return (Json_Result) {
+            .is_error = 1,
+            .rest = source,
+            .message = "Expected ']'",
+        };
+    } else if(*source.data == ']') {
         return (Json_Result) {
             .value = {
                 .type = JSON_ARRAY,
@@ -299,7 +302,7 @@ static Json_Result parse_json_array(Memory *memory, String source)
                     .end = NULL
                 },
             },
-            .rest = drop(source_trimmed, 1)
+            .rest = drop(source, 1)
         };
     }
 
@@ -308,38 +311,50 @@ static Json_Result parse_json_array(Memory *memory, String source)
         .end = NULL
     };
 
-    while(source_trimmed.len > 0) {
-        Json_Result item_result = parse_json_value(memory, source_trimmed);
+    while(source.len > 0) {
+        Json_Result item_result = parse_json_value(memory, source);
         if(item_result.is_error) {
             return item_result;
         }
 
         json_array_push(memory, &array, item_result.value);
 
-        source_trimmed = trim_begin(item_result.rest);
+        source = trim_begin(item_result.rest);
 
-        if(*source_trimmed.data == ']') {
+        if(*source.data == ']') {
             return (Json_Result) {
                 .value = {
                     .type = JSON_ARRAY,
                     .array = array
                 },
-                .rest = drop(source_trimmed, 1)
+                .rest = drop(source, 1)
             };
-        } else if (*source_trimmed.data == ',') {
-            source_trimmed = trim_begin(drop(source_trimmed, 1));
+        } else if (*source.data == ',') {
+            source = trim_begin(drop(source, 1));
         } else {
-            return json_error;
+            return (Json_Result) {
+                .is_error = 1,
+                .rest = source,
+                .message = "Expected ']' or ','",
+            };
         }
     }
 
-    return json_error;
+    return (Json_Result) {
+        .is_error = 1,
+        .rest = source,
+        .message = "EOF",
+    };
 }
 
 static Json_Result parse_json_object(Memory *memory, String source)
 {
-    assert(!"TODO(#21): parse_json_object is not implemented");
-    return json_error;
+    // TODO(#21): parse_json_object is not implemented
+    return (Json_Result) {
+        .is_error = 1,
+        .rest = source,
+        .message = "Objects are not implemented",
+    };
 }
 
 Json_Result parse_json_value(Memory *memory, String source)
@@ -354,9 +369,9 @@ Json_Result parse_json_value(Memory *memory, String source)
     }
 
     switch (*trimmed_source.data) {
-    case 'n': return parse_json_null(trimmed_source);
-    case 't':
-    case 'f': return parse_json_boolean(trimmed_source);
+    case 'n': return parse_token(source, SLT("null"), json_null, "Expected `null`");
+    case 't': return parse_token(source, SLT("true"), json_true, "Expected `true`");
+    case 'f': return parse_token(source, SLT("false"), json_false, "Expected `false`");
     case '"': return parse_json_string(memory, trimmed_source);
     case '[': return parse_json_array(memory, trimmed_source);
     case '{': return parse_json_object(memory, trimmed_source);
