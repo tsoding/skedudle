@@ -67,7 +67,6 @@ struct Json_Array_Page {
 typedef struct {
     Json_Value value;
     String rest;
-    // TODO(#22): error reporting in Json_Result is very poor
     int is_error;
     const char *message;
 } Json_Result;
