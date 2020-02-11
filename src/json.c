@@ -3,13 +3,6 @@
 static Json_Value json_null = { .type = JSON_NULL };
 static Json_Value json_true = { .type = JSON_BOOLEAN, .boolean = 1 };
 static Json_Value json_false = { .type = JSON_BOOLEAN, .boolean = 0 };
-static Json_Value json_number(double value)
-{
-    return (Json_Value) {
-        .type = JSON_NUMBER,
-        .boolean = value
-    };
-}
 
 void json_array_push(Memory *memory, Json_Array *array, Json_Value value)
 {
