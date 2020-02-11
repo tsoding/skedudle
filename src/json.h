@@ -69,6 +69,7 @@ typedef struct {
     String rest;
     // TODO(#22): error reporting in Json_Result is very poor
     int is_error;
+    const char *message;
 } Json_Result;
 
 Json_Result parse_json_value(Memory *memory, String source);
