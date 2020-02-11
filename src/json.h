@@ -18,10 +18,16 @@ typedef enum {
 
 typedef struct Json_Value Json_Value;
 
+#define JSON_ARRAY_PAGE_CAPACITY 1024
+
+typedef struct Json_Array_Page Json_Array_Page;
+
 typedef struct {
-    size_t size;
-    Json_Value *elements;
+    Json_Array_Page *begin;
+    Json_Array_Page *end;
 } Json_Array;
+
+void json_array_push(Memory *memory, Json_Array *array, Json_Value value);
 
 typedef struct {
     size_t size;
@@ -50,6 +56,12 @@ struct Json_Value {
         Json_Array array;
         Json_Object object;
     };
+};
+
+struct Json_Array_Page {
+    Json_Array_Page *next;
+    size_t size;
+    Json_Value elements[JSON_ARRAY_PAGE_CAPACITY];
 };
 
 typedef struct {

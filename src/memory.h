@@ -28,15 +28,6 @@ void *memory_alloc(Memory *memory, size_t size)
 }
 
 static inline
-void *memory_realloc(Memory *memory, void *old_buffer, size_t old_size, size_t new_size)
-{
-    assert(new_size >= old_size);
-    void *new_buffer = memory_alloc(memory, new_size);
-    memcpy(new_buffer, old_buffer, old_size);
-    return new_buffer;
-}
-
-static inline
 void memory_clean(Memory *memory)
 {
     assert(memory);

@@ -11,6 +11,30 @@ static Json_Value json_number(double value)
     };
 }
 
+void json_array_push(Memory *memory, Json_Array *array, Json_Value value)
+{
+    assert(memory);
+    assert(array);
+
+    if (array->begin == NULL) {
+        assert(array->end == NULL);
+        array->begin = memory_alloc(memory, sizeof(Json_Array_Page));
+        array->end = array->begin;
+        memset(array->begin, 0, sizeof(Json_Array_Page));
+    }
+
+    if (array->end->size >= JSON_ARRAY_PAGE_CAPACITY) {
+        Json_Array_Page *next = memory_alloc(memory, sizeof(Json_Array_Page));
+        memset(next, 0, sizeof(Json_Array_Page));
+        array->end->next = next;
+        array->end = next;
+    }
+
+    assert(array->end->size < JSON_ARRAY_PAGE_CAPACITY);
+
+    array->end->elements[array->end->size++] = value;
+}
+
 int64_t stoi64(String integer)
 {
     if (integer.len == 0) {
@@ -271,16 +295,18 @@ static Json_Result parse_json_array(Memory *memory, String source)
             .value = {
                 .type = JSON_ARRAY,
                 .array = {
-                    .size = 0,
-                    .elements = NULL
+                    .begin = NULL,
+                    .end = NULL
                 },
             },
             .rest = drop(source_trimmed, 1)
         };
     }
 
-    Json_Value *elements = NULL;
-    size_t elements_size = 0;
+    Json_Array array = {
+        .begin = NULL,
+        .end = NULL
+    };
 
     while(source_trimmed.len > 0) {
         Json_Result item_result = parse_json_value(memory, source_trimmed);
@@ -288,20 +314,7 @@ static Json_Result parse_json_array(Memory *memory, String source)
             return item_result;
         }
 
-        if(elements == NULL) {
-            elements = memory_alloc(memory, sizeof(Json_Result));
-            elements_size = 1;
-        } else {
-            elements = memory_realloc(
-                memory,
-                elements,
-                elements_size * sizeof(Json_Result),
-                (elements_size + 1) * sizeof(Json_Result));
-                
-                elements_size++;
-        }
-
-        elements[elements_size - 1] = item_result.value;
+        json_array_push(memory, &array, item_result.value);
 
         source_trimmed = trim_begin(item_result.rest);
 
@@ -309,10 +322,7 @@ static Json_Result parse_json_array(Memory *memory, String source)
             return (Json_Result) {
                 .value = {
                     .type = JSON_ARRAY,
-                    .array = {
-                        .size = elements_size,
-                        .elements = elements
-                    }
+                    .array = array
                 },
                 .rest = drop(source_trimmed, 1)
             };
@@ -437,9 +447,16 @@ static
 void print_json_array(FILE *stream, Json_Array array)
 {
     fprintf(stream, "[");
-    for (size_t i = 0; i < array.size; ++i) {
-        if (i > 0) fprintf(stream, ",");
-        print_json_value(stream, array.elements[i]);
+    int t = 0;
+    for (Json_Array_Page *page = array.begin; page != NULL; page = page->next) {
+        for (size_t i = 0; i < page->size; ++i) {
+            if (t) {
+                printf(",");
+            } else {
+                t = 1;
+            }
+            print_json_value(stream, page->elements[i]);
+        }
     }
     fprintf(stream, "]");
 }
