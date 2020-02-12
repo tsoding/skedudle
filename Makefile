@@ -1,4 +1,3 @@
-CC=clang
 CFLAGS=-Wall -Wextra -Wno-unused-result -pedantic -std=c11 -I./third_party/frozen/ -ggdb
 CS=src/main.c src/schedule.c src/json.c
 HS=src/s.h src/request.h src/response.h src/error_page_template.h src/schedule.h src/rest_map_template.h src/json.h
