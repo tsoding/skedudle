@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include "json.h"
 
 static Json_Value json_null = { .type = JSON_NULL };
@@ -503,4 +504,24 @@ void print_json_value(FILE *stream, Json_Value value)
         print_json_object(stream, value.object);
     } break;
     }
+}
+
+void print_json_error(FILE *stream, Json_Result result,
+                      String source)
+{
+    assert(stream);
+    assert(source.data <= result.rest.data);
+
+    fwrite(source.data, 1, source.len, stream);
+    fputc('\n', stream);
+
+    size_t n = result.rest.data - source.data;
+    for (size_t j = 0; j < n; ++j) {
+        fputc(' ', stream);
+    }
+    fputc('^', stream);
+    fputc('\n', stream);
+
+    fputs(result.message, stream);
+    fputc('\n', stream);
 }

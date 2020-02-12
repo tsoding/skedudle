@@ -43,18 +43,11 @@ int main(void)
     for (size_t i = 0; i < tests_count; ++i) {
         Json_Result result = parse_json_value(&memory, tests[i]);
         if (result.is_error) {
-            fwrite(tests[i].data, 1, tests[i].len, stdout); fputc('\n', stdout);
-            size_t n = result.rest.data - tests[i].data;
-            for (size_t j = 0; j < n; ++j) {
-                fputc(' ', stdout);
-            }
-            fputc('^', stdout);
-            fputc('\n', stdout);
-
-            fputs(result.message, stdout);
+            print_json_error(stdout, result, tests[i]);
+        } else {
+            print_json_value(stdout, result.value);
             fputc('\n', stdout);
         }
-        print_json_value(stdout, result.value); fputc('\n', stdout);
     }
 
     free(memory.buffer);

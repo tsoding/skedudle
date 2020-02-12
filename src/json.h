@@ -72,6 +72,7 @@ typedef struct {
 } Json_Result;
 
 Json_Result parse_json_value(Memory *memory, String source);
+void print_json_error(FILE *stream, Json_Result result, String source);
 void print_json_value(FILE *stream, Json_Value value);
 
 #endif  // JSON_H_
