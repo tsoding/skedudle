@@ -507,21 +507,35 @@ void print_json_value(FILE *stream, Json_Value value)
 }
 
 void print_json_error(FILE *stream, Json_Result result,
-                      String source)
+                      String source, const char *prefix)
 {
     assert(stream);
     assert(source.data <= result.rest.data);
 
-    fwrite(source.data, 1, source.len, stream);
-    fputc('\n', stream);
-
     size_t n = result.rest.data - source.data;
-    for (size_t j = 0; j < n; ++j) {
-        fputc(' ', stream);
-    }
-    fputc('^', stream);
-    fputc('\n', stream);
 
-    fputs(result.message, stream);
-    fputc('\n', stream);
+    for (size_t line_number = 1; source.len; ++line_number) {
+        String line = chop_line(&source);
+
+        if (n < line.len) {
+            fprintf(stream, "%s:%ld: %s\n", prefix, line_number, result.message);
+            fwrite(line.data, 1, line.len, stream);
+            fputc('\n', stream);
+
+            for (size_t j = 0; j < n; ++j) {
+                fputc(' ', stream);
+            }
+            fputc('^', stream);
+            fputc('\n', stream);
+            break;
+        }
+        
+        n -= line.len + 1;
+    }
+
+    for (int i = 0; source.len && i < 3; ++i) {
+        String line = chop_line(&source);
+        fwrite(line.data, 1, line.len, stream);
+        fputc('\n', stream);
+    }
 }
