@@ -354,9 +354,9 @@ static Json_Result parse_json_object(Memory *memory, String source)
 
 Json_Result parse_json_value(Memory *memory, String source)
 {
-    String trimmed_source = trim_begin(source);
+    source = trim_begin(source);
 
-    if (trimmed_source.len == 0) {
+    if (source.len == 0) {
         return (Json_Result) {
             .is_error = 1,
             .message = "EOF",
@@ -364,16 +364,16 @@ Json_Result parse_json_value(Memory *memory, String source)
         };
     }
 
-    switch (*trimmed_source.data) {
+    switch (*source.data) {
     case 'n': return parse_token(source, SLT("null"), json_null, "Expected `null`");
     case 't': return parse_token(source, SLT("true"), json_true, "Expected `true`");
     case 'f': return parse_token(source, SLT("false"), json_false, "Expected `false`");
-    case '"': return parse_json_string(memory, trimmed_source);
-    case '[': return parse_json_array(memory, trimmed_source);
-    case '{': return parse_json_object(memory, trimmed_source);
+    case '"': return parse_json_string(memory, source);
+    case '[': return parse_json_array(memory, source);
+    case '{': return parse_json_object(memory, source);
     }
 
-    return parse_json_number(trimmed_source);
+    return parse_json_number(source);
 }
 
 static
