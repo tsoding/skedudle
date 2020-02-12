@@ -342,6 +342,7 @@ static Json_Result parse_json_array(Memory *memory, String source)
 
 static Json_Result parse_json_object(Memory *memory, String source)
 {
+    assert(memory);
     // TODO(#21): parse_json_object is not implemented
     return (Json_Result) {
         .is_error = 1,

@@ -4,7 +4,7 @@
 
 #define MEMORY_CAPACITY (640 * 1000)
 
-int main(int argc, char *argv[])
+int main(void)
 {
     Memory memory = {
         .capacity = MEMORY_CAPACITY,
