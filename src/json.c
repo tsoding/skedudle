@@ -357,7 +357,8 @@ Json_Result parse_json_value(Memory *memory, String source)
     if (trimmed_source.len == 0) {
         return (Json_Result) {
             .is_error = 1,
-            .message = "EOF"
+            .message = "EOF",
+            .rest = source
         };
     }
 
