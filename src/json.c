@@ -373,11 +373,95 @@ static Json_Result parse_json_array(Memory *memory, String source)
 static Json_Result parse_json_object(Memory *memory, String source)
 {
     assert(memory);
-    // TODO(#21): parse_json_object is not implemented
+
+    if (source.len == 0 || *source.data != '{') {
+        return (Json_Result) {
+            .is_error = 1,
+            .rest = source,
+            .message = "Expected '{'"
+        };
+    }
+
+    chop(&source, 1);
+
+    source = trim_begin(source);
+
+    if (source.len == 0) {
+        return (Json_Result) {
+            .is_error = 1,
+            .rest = source,
+            .message = "Expected '}'"
+        };
+    } else if (*source.data == '}') {
+        return (Json_Result) {
+            .value = { .type = JSON_OBJECT },
+            .rest = drop(source, 1)
+        };
+    }
+
+    Json_Object object = {0};
+
+    while (source.len > 0) {
+        source = trim_begin(source);
+
+        Json_Result key_result = parse_json_string(memory, source);
+        if (key_result.is_error) {
+            return key_result;
+        }
+        source = trim_begin(key_result.rest);
+
+        if (source.len == 0 || *source.data != ':') {
+            return (Json_Result) {
+                .is_error = 1,
+                .rest = source,
+                .message = "Expected ':'"
+            };
+        }
+
+        chop(&source, 1);
+
+        Json_Result value_result = parse_json_value(memory, source);
+        if (value_result.is_error) {
+            return value_result;
+        }
+        source = trim_begin(value_result.rest);
+
+        assert(key_result.value.type == JSON_STRING);
+        json_object_push(memory, &object, key_result.value.string, value_result.value);
+
+        if (source.len == 0) {
+            return (Json_Result) {
+                .is_error = 1,
+                .rest = source,
+                .message = "Expected '}' or ','",
+            };
+        }
+
+        if (*source.data == '}') {
+            return (Json_Result) {
+                .value = {
+                    .type = JSON_OBJECT,
+                    .object = object
+                },
+                .rest = drop(source, 1)
+            };
+        }
+
+        if (*source.data != ',') {
+            return (Json_Result) {
+                .is_error = 1,
+                .rest = source,
+                .message = "Expected '}' or ','",
+            };
+        }
+
+        source = drop(source, 1);
+    }
+
     return (Json_Result) {
         .is_error = 1,
         .rest = source,
-        .message = "Objects are not implemented",
+        .message = "EOF",
     };
 }
 

@@ -46,7 +46,25 @@ int main(void)
             "  true,\n"
             "  false #\n"
             "  null\n"
-            "]")
+            "]"),
+        SLT("{\n"
+            "   \"null\": null,\n"
+            "   \"boolean\": true,\n"
+            "   \"boolean\": false,\n"
+            "   \"number\": 69420,\n"
+            "   \"string\": \"hello\",\n"
+            "   \"array\": [null, true, false, 69420, \"hello\"],\n"
+            "   \"object\": {}\n"
+            "}"),
+        SLT("{\n"
+            "   \"null\": null,\n"
+            "   \"boolean\": true\n"
+            "   \"boolean\": false,\n"
+            "   \"number\": 69420,\n"
+            "   \"string\": \"hello\",\n"
+            "   \"array\": [null, true, false, 69420, \"hello\"],\n"
+            "   \"object\": {}\n"
+            "}")
     };
     size_t tests_count = sizeof(tests) / sizeof(tests[0]);
 
@@ -65,7 +83,9 @@ int main(void)
             fputc('\n', stdout);
         }
 
+        printf("MEMORY USAGE: %lu bytes\n", memory.size);
         fputs("------------------------------\n", stdout);
+        memory_clean(&memory);
     }
 
     free(memory.buffer);
