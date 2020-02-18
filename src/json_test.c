@@ -54,7 +54,7 @@ int main(void)
         fputs("PARSING: \n", stdout);
         fwrite(tests[i].data, 1, tests[i].len, stdout);
         fputc('\n', stdout);
-        
+
         Json_Result result = parse_json_value(&memory, tests[i]);
         if (result.is_error) {
             fputs("FAILURE: \n", stdout);
@@ -64,7 +64,7 @@ int main(void)
             print_json_value(stdout, result.value);
             fputc('\n', stdout);
         }
-        
+
         fputs("------------------------------\n", stdout);
     }
 

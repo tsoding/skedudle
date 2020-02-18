@@ -29,6 +29,32 @@ void json_array_push(Memory *memory, Json_Array *array, Json_Value value)
     array->end->elements[array->end->size++] = value;
 }
 
+void json_object_push(Memory *memory, Json_Object *object, String key, Json_Value value)
+{
+    assert(memory);
+    assert(object);
+
+    if (object->begin == NULL) {
+        assert(object->end == NULL);
+        object->begin = memory_alloc(memory, sizeof(Json_Object_Page));
+        object->end = object->begin;
+        memset(object->begin, 0, sizeof(Json_Object_Page));
+    }
+
+    if (object->end->size >= JSON_OBJECT_PAGE_CAPACITY) {
+        Json_Object_Page *next = memory_alloc(memory, sizeof(Json_Object_Page));
+        memset(next, 0, sizeof(Json_Object_Page));
+        object->end->next = next;
+        object->end = next;
+    }
+
+    assert(object->end->size < JSON_OBJECT_PAGE_CAPACITY);
+
+    object->end->elements[object->end->size].key = key;
+    object->end->elements[object->end->size].value = value;
+    object->end->size += 1;
+}
+
 int64_t stoi64(String integer)
 {
     if (integer.len == 0) {
@@ -473,11 +499,18 @@ void print_json_array(FILE *stream, Json_Array array)
 void print_json_object(FILE *stream, Json_Object object)
 {
     fprintf(stream, "{");
-    for (size_t i = 0; i < object.size; ++i) {
-        if (i > 0) fprintf(stream, ",");
-        print_json_string(stream, object.keys[i]);
-        fprintf(stream, ":");
-        print_json_value(stream, object.values[i]);
+    int t = 0;
+    for (Json_Object_Page *page = object.begin; page != NULL; page = page->next) {
+        for (size_t i = 0; i < page->size; ++i) {
+            if (t) {
+                printf(",");
+            } else {
+                t = 1;
+            }
+            print_json_string(stream, page->elements[i].key);
+            fprintf(stream, ":");
+            print_json_value(stream, page->elements[i].value);
+        }
     }
     fprintf(stream, "}");
 }
@@ -529,7 +562,7 @@ void print_json_error(FILE *stream, Json_Result result,
             fputc('\n', stream);
             break;
         }
-        
+
         n -= line.len + 1;
     }
 
