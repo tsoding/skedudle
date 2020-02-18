@@ -29,6 +29,32 @@ void json_array_push(Memory *memory, Json_Array *array, Json_Value value)
     array->end->elements[array->end->size++] = value;
 }
 
+void json_object_push(Memory *memory, Json_Object *object, String key, Json_Value value)
+{
+    assert(memory);
+    assert(object);
+
+    if (object->begin == NULL) {
+        assert(object->end == NULL);
+        object->begin = memory_alloc(memory, sizeof(Json_Object_Page));
+        object->end = object->begin;
+        memset(object->begin, 0, sizeof(Json_Object_Page));
+    }
+
+    if (object->end->size >= JSON_OBJECT_PAGE_CAPACITY) {
+        Json_Object_Page *next = memory_alloc(memory, sizeof(Json_Object_Page));
+        memset(next, 0, sizeof(Json_Object_Page));
+        object->end->next = next;
+        object->end = next;
+    }
+
+    assert(object->end->size < JSON_OBJECT_PAGE_CAPACITY);
+
+    object->end->elements[object->end->size].key = key;
+    object->end->elements[object->end->size].value = value;
+    object->end->size += 1;
+}
+
 int64_t stoi64(String integer)
 {
     if (integer.len == 0) {
@@ -269,6 +295,8 @@ static Json_Result parse_json_string(Memory *memory, String source)
 
 static Json_Result parse_json_array(Memory *memory, String source)
 {
+    assert(memory);
+
     if(source.len == 0 || *source.data != '[') {
         return (Json_Result) {
             .is_error = 1,
@@ -289,21 +317,12 @@ static Json_Result parse_json_array(Memory *memory, String source)
         };
     } else if(*source.data == ']') {
         return (Json_Result) {
-            .value = {
-                .type = JSON_ARRAY,
-                .array = {
-                    .begin = NULL,
-                    .end = NULL
-                },
-            },
+            .value = { .type = JSON_ARRAY },
             .rest = drop(source, 1)
         };
     }
 
-    Json_Array array = {
-        .begin = NULL,
-        .end = NULL
-    };
+    Json_Array array = {0};
 
     while(source.len > 0) {
         Json_Result item_result = parse_json_value(memory, source);
@@ -315,7 +334,15 @@ static Json_Result parse_json_array(Memory *memory, String source)
 
         source = trim_begin(item_result.rest);
 
-        if(*source.data == ']') {
+        if (source.len == 0) {
+            return (Json_Result) {
+                .is_error = 1,
+                .rest = source,
+                .message = "Expected ']' or ','",
+            };
+        }
+
+        if (*source.data == ']') {
             return (Json_Result) {
                 .value = {
                     .type = JSON_ARRAY,
@@ -323,15 +350,17 @@ static Json_Result parse_json_array(Memory *memory, String source)
                 },
                 .rest = drop(source, 1)
             };
-        } else if (*source.data == ',') {
-            source = trim_begin(drop(source, 1));
-        } else {
+        }
+
+        if (*source.data != ',') {
             return (Json_Result) {
                 .is_error = 1,
                 .rest = source,
                 .message = "Expected ']' or ','",
             };
         }
+
+        source = trim_begin(drop(source, 1));
     }
 
     return (Json_Result) {
@@ -344,11 +373,95 @@ static Json_Result parse_json_array(Memory *memory, String source)
 static Json_Result parse_json_object(Memory *memory, String source)
 {
     assert(memory);
-    // TODO(#21): parse_json_object is not implemented
+
+    if (source.len == 0 || *source.data != '{') {
+        return (Json_Result) {
+            .is_error = 1,
+            .rest = source,
+            .message = "Expected '{'"
+        };
+    }
+
+    chop(&source, 1);
+
+    source = trim_begin(source);
+
+    if (source.len == 0) {
+        return (Json_Result) {
+            .is_error = 1,
+            .rest = source,
+            .message = "Expected '}'"
+        };
+    } else if (*source.data == '}') {
+        return (Json_Result) {
+            .value = { .type = JSON_OBJECT },
+            .rest = drop(source, 1)
+        };
+    }
+
+    Json_Object object = {0};
+
+    while (source.len > 0) {
+        source = trim_begin(source);
+
+        Json_Result key_result = parse_json_string(memory, source);
+        if (key_result.is_error) {
+            return key_result;
+        }
+        source = trim_begin(key_result.rest);
+
+        if (source.len == 0 || *source.data != ':') {
+            return (Json_Result) {
+                .is_error = 1,
+                .rest = source,
+                .message = "Expected ':'"
+            };
+        }
+
+        chop(&source, 1);
+
+        Json_Result value_result = parse_json_value(memory, source);
+        if (value_result.is_error) {
+            return value_result;
+        }
+        source = trim_begin(value_result.rest);
+
+        assert(key_result.value.type == JSON_STRING);
+        json_object_push(memory, &object, key_result.value.string, value_result.value);
+
+        if (source.len == 0) {
+            return (Json_Result) {
+                .is_error = 1,
+                .rest = source,
+                .message = "Expected '}' or ','",
+            };
+        }
+
+        if (*source.data == '}') {
+            return (Json_Result) {
+                .value = {
+                    .type = JSON_OBJECT,
+                    .object = object
+                },
+                .rest = drop(source, 1)
+            };
+        }
+
+        if (*source.data != ',') {
+            return (Json_Result) {
+                .is_error = 1,
+                .rest = source,
+                .message = "Expected '}' or ','",
+            };
+        }
+
+        source = drop(source, 1);
+    }
+
     return (Json_Result) {
         .is_error = 1,
         .rest = source,
-        .message = "Objects are not implemented",
+        .message = "EOF",
     };
 }
 
@@ -473,11 +586,18 @@ void print_json_array(FILE *stream, Json_Array array)
 void print_json_object(FILE *stream, Json_Object object)
 {
     fprintf(stream, "{");
-    for (size_t i = 0; i < object.size; ++i) {
-        if (i > 0) fprintf(stream, ",");
-        print_json_string(stream, object.keys[i]);
-        fprintf(stream, ":");
-        print_json_value(stream, object.values[i]);
+    int t = 0;
+    for (Json_Object_Page *page = object.begin; page != NULL; page = page->next) {
+        for (size_t i = 0; i < page->size; ++i) {
+            if (t) {
+                printf(",");
+            } else {
+                t = 1;
+            }
+            print_json_string(stream, page->elements[i].key);
+            fprintf(stream, ":");
+            print_json_value(stream, page->elements[i].value);
+        }
     }
     fprintf(stream, "}");
 }
@@ -529,7 +649,7 @@ void print_json_error(FILE *stream, Json_Result result,
             fputc('\n', stream);
             break;
         }
-        
+
         n -= line.len + 1;
     }
 

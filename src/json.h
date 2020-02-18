@@ -29,10 +29,11 @@ typedef struct {
 
 void json_array_push(Memory *memory, Json_Array *array, Json_Value value);
 
+typedef struct Json_Object_Page Json_Object_Page;
+
 typedef struct {
-    size_t size;
-    String *keys;
-    Json_Value *values;
+    Json_Object_Page *begin;
+    Json_Object_Page *end;
 } Json_Object;
 
 typedef struct {
@@ -70,6 +71,19 @@ typedef struct {
     int is_error;
     const char *message;
 } Json_Result;
+
+typedef struct {
+    String key;
+    Json_Value value;
+} Json_Object_Member;
+
+#define JSON_OBJECT_PAGE_CAPACITY 1024
+
+struct Json_Object_Page {
+    Json_Object_Page *next;
+    size_t size;
+    Json_Object_Member elements[JSON_OBJECT_PAGE_CAPACITY];
+};
 
 Json_Result parse_json_value(Memory *memory, String source);
 void print_json_error(FILE *stream, Json_Result result, String source, const char *prefix);
