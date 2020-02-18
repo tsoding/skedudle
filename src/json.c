@@ -67,6 +67,9 @@ int64_t stoi64(String integer)
     if (*integer.data == '-') {
         sign = -1;
         chop(&integer, 1);
+    } else if (*integer.data == '+') {
+        sign = 1;
+        chop(&integer, 1);
     }
 
     while (integer.len) {
@@ -162,9 +165,10 @@ static Json_Result parse_json_number(String source)
 
     if (source.len && tolower(*source.data) == 'e') {
         chop(&source, 1);
+
         exponent.data = source.data;
 
-        if (source.len && *source.data == '-') {
+        if (source.len && (*source.data == '-' || *source.data == '+')) {
             exponent.len  += 1;
             chop(&source, 1);
         }
@@ -174,7 +178,9 @@ static Json_Result parse_json_number(String source)
             chop(&source, 1);
         }
 
-        if (exponent.len == 0 || string_equal(exponent, SLT("-"))) {
+        if (exponent.len == 0 ||
+            string_equal(exponent, SLT("-")) ||
+            string_equal(exponent, SLT("+"))) {
             return (Json_Result) {
                 .is_error = 1,
                 .rest = source,
