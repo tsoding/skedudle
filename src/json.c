@@ -161,6 +161,14 @@ static Json_Result parse_json_number(String source)
             fraction.len  += 1;
             chop(&source, 1);
         }
+
+        if (fraction.len == 0) {
+            return (Json_Result) {
+                .is_error = 1,
+                .rest = source,
+                .message = "Incorrect number literal"
+            };
+        }
     }
 
     if (source.len && tolower(*source.data) == 'e') {
