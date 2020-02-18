@@ -15,6 +15,7 @@ int main(void)
 
     String tests[] = {
         SLT("null"),
+        SLT("nullptr"),
         SLT("true"),
         SLT("false"),
         SLT("1"),
@@ -77,6 +78,15 @@ int main(void)
         if (result.is_error) {
             fputs("FAILURE: \n", stdout);
             print_json_error(stdout, result, tests[i], "<test>");
+        } else if (trim_begin(result.rest).len != 0) {
+            fputs("FAILURE: \n", stdout);
+            fputs("parsed ", stdout);
+            print_json_value(stdout, result.value);
+            fputc('\n', stdout);
+
+            fputs("but left unparsed input: ", stdout);
+            fwrite(result.rest.data, 1, result.rest.len, stdout);
+            fputc('\n', stdout);
         } else {
             fputs("SUCCESS: \n", stdout);
             print_json_value(stdout, result.value);
