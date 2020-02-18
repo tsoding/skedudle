@@ -295,6 +295,8 @@ static Json_Result parse_json_string(Memory *memory, String source)
 
 static Json_Result parse_json_array(Memory *memory, String source)
 {
+    assert(memory);
+
     if(source.len == 0 || *source.data != '[') {
         return (Json_Result) {
             .is_error = 1,
@@ -315,21 +317,12 @@ static Json_Result parse_json_array(Memory *memory, String source)
         };
     } else if(*source.data == ']') {
         return (Json_Result) {
-            .value = {
-                .type = JSON_ARRAY,
-                .array = {
-                    .begin = NULL,
-                    .end = NULL
-                },
-            },
+            .value = { .type = JSON_ARRAY },
             .rest = drop(source, 1)
         };
     }
 
-    Json_Array array = {
-        .begin = NULL,
-        .end = NULL
-    };
+    Json_Array array = {0};
 
     while(source.len > 0) {
         Json_Result item_result = parse_json_value(memory, source);
@@ -341,7 +334,15 @@ static Json_Result parse_json_array(Memory *memory, String source)
 
         source = trim_begin(item_result.rest);
 
-        if(*source.data == ']') {
+        if (source.len == 0) {
+            return (Json_Result) {
+                .is_error = 1,
+                .rest = source,
+                .message = "Expected ']' or ','",
+            };
+        }
+
+        if (*source.data == ']') {
             return (Json_Result) {
                 .value = {
                     .type = JSON_ARRAY,
@@ -349,15 +350,17 @@ static Json_Result parse_json_array(Memory *memory, String source)
                 },
                 .rest = drop(source, 1)
             };
-        } else if (*source.data == ',') {
-            source = trim_begin(drop(source, 1));
-        } else {
+        }
+
+        if (*source.data != ',') {
             return (Json_Result) {
                 .is_error = 1,
                 .rest = source,
                 .message = "Expected ']' or ','",
             };
         }
+
+        source = trim_begin(drop(source, 1));
     }
 
     return (Json_Result) {
