@@ -5,6 +5,20 @@ static Json_Value json_null = { .type = JSON_NULL };
 static Json_Value json_true = { .type = JSON_BOOLEAN, .boolean = 1 };
 static Json_Value json_false = { .type = JSON_BOOLEAN, .boolean = 0 };
 
+int json_isspace(char c)
+{
+    return c == 0x20 || c == 0x0A || c == 0x0D || c == 0x09;
+}
+
+String json_trim_begin(String s)
+{
+    while (s.len && json_isspace(*s.data)) {
+        s.data++;
+        s.len--;
+    }
+    return s;
+}
+
 void json_array_push(Memory *memory, Json_Array *array, Json_Value value)
 {
     assert(memory);
@@ -321,7 +335,7 @@ static Json_Result parse_json_array(Memory *memory, String source)
 
     chop(&source, 1);
 
-    source = trim_begin(source);
+    source = json_trim_begin(source);
 
     if (source.len == 0) {
         return (Json_Result) {
@@ -346,7 +360,7 @@ static Json_Result parse_json_array(Memory *memory, String source)
 
         json_array_push(memory, &array, item_result.value);
 
-        source = trim_begin(item_result.rest);
+        source = json_trim_begin(item_result.rest);
 
         if (source.len == 0) {
             return (Json_Result) {
@@ -374,7 +388,7 @@ static Json_Result parse_json_array(Memory *memory, String source)
             };
         }
 
-        source = trim_begin(drop(source, 1));
+        source = json_trim_begin(drop(source, 1));
     }
 
     return (Json_Result) {
@@ -398,7 +412,7 @@ static Json_Result parse_json_object(Memory *memory, String source)
 
     chop(&source, 1);
 
-    source = trim_begin(source);
+    source = json_trim_begin(source);
 
     if (source.len == 0) {
         return (Json_Result) {
@@ -416,13 +430,13 @@ static Json_Result parse_json_object(Memory *memory, String source)
     Json_Object object = {0};
 
     while (source.len > 0) {
-        source = trim_begin(source);
+        source = json_trim_begin(source);
 
         Json_Result key_result = parse_json_string(memory, source);
         if (key_result.is_error) {
             return key_result;
         }
-        source = trim_begin(key_result.rest);
+        source = json_trim_begin(key_result.rest);
 
         if (source.len == 0 || *source.data != ':') {
             return (Json_Result) {
@@ -438,7 +452,7 @@ static Json_Result parse_json_object(Memory *memory, String source)
         if (value_result.is_error) {
             return value_result;
         }
-        source = trim_begin(value_result.rest);
+        source = json_trim_begin(value_result.rest);
 
         assert(key_result.value.type == JSON_STRING);
         json_object_push(memory, &object, key_result.value.string, value_result.value);
@@ -481,7 +495,7 @@ static Json_Result parse_json_object(Memory *memory, String source)
 
 Json_Result parse_json_value(Memory *memory, String source)
 {
-    source = trim_begin(source);
+    source = json_trim_begin(source);
 
     if (source.len == 0) {
         return (Json_Result) {

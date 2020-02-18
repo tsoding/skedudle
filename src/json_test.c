@@ -67,7 +67,8 @@ int main(void)
             "   \"object\": {}\n"
             "}"),
         SLT("[0e+1]"),
-        SLT("[0e+-1]")
+        SLT("[0e+-1]"),
+        SLT("[0C]")
     };
     size_t tests_count = sizeof(tests) / sizeof(tests[0]);
 
