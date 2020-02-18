@@ -159,7 +159,10 @@ static Json_Result parse_json_number(String source)
     }
 
     // TODO(#34): empty integer with fraction is not taken into account
-    if (integer.len == 0 || string_equal(integer, SLT("-"))) {
+    if (integer.len == 0
+        || string_equal(integer, SLT("-"))
+        || (integer.len > 1 && *integer.data == '0')
+        || (integer.len > 2 && prefix_of(SLT("-0"), integer))) {
         return (Json_Result) {
             .is_error = 1,
             .rest = source,
