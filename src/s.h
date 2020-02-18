@@ -141,6 +141,12 @@ String drop(String s, size_t n)
 }
 
 static inline
+int prefix_of(String prefix, String s)
+{
+    return string_equal(prefix, take(s, prefix.len));
+}
+
+static inline
 void chop(String *s, size_t n)
 {
     *s = drop(*s, n);

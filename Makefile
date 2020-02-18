@@ -3,7 +3,7 @@ CS=src/main.c src/schedule.c src/json.c
 HS=src/s.h src/request.h src/response.h src/error_page_template.h src/schedule.h src/rest_map_template.h src/json.h
 LIBS=-lm
 
-all: skedudle frozen_test json_test
+all: skedudle frozen_test json_test json_check
 
 skedudle: $(CS) $(HS) frozen.o
 	$(CC) $(CFLAGS) -o skedudle $(CS) frozen.o $(LIBS)
@@ -25,3 +25,6 @@ src/rest_map_template.h: tt src/rest_map_template.h.tt
 
 json_test: src/json.c src/json_test.c src/s.h src/memory.h
 	$(CC) $(CFLAGS) -o json_test src/json.c src/json_test.c $(LIBS)
+
+json_check: src/json.c src/json_check.c src/s.h src/memory.h
+	$(CC) $(CFLAGS) -o json_check src/json.c src/json_check.c $(LIBS)

@@ -2,6 +2,7 @@
 skedudle
 tt
 *_test
+json_check
 
 # intermediate garbage
 *_template.h

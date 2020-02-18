@@ -65,7 +65,10 @@ int main(void)
             "   \"string\": \"hello\",\n"
             "   \"array\": [null, true, false, 69420, \"hello\"],\n"
             "   \"object\": {}\n"
-            "}")
+            "}"),
+        SLT("[0e+1]"),
+        SLT("[0e+-1]"),
+        SLT("[0C]")
     };
     size_t tests_count = sizeof(tests) / sizeof(tests[0]);
 
