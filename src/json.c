@@ -469,7 +469,7 @@ static Json_Result parse_json_string(Memory *memory, String source)
 
             source = result.rest;
         } else {
-            // TODO: json parser is not aware of the input encoding
+            // TODO(#37): json parser is not aware of the input encoding
             assert(buffer_size < buffer_capacity);
             buffer[buffer_size++] = *source.data;
             chop(&source, 1);
