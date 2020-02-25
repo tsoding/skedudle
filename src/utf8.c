@@ -34,11 +34,3 @@ Utf8_Chunk utf8_encode_rune(uint32_t rune)
         return (Utf8_Chunk){0};
     }
 }
-
-Utf8_Chunk utf8_encode_utf16_surrogate(uint16_t w1, uint16_t w2)
-{
-    // U' = yyyyyyyyyyxxxxxxxxxx  // U - 0x10000
-    // W1 = 110110yyyyyyyyyy      // 0xD800 + yyyyyyyyyy
-    // W2 = 110111xxxxxxxxxx      // 0xDC00 + xxxxxxxxxx
-    return utf8_encode_rune((((w1 - 0xD800) << 10) | (w2 - 0xDC00)) + 0x10000);
-}
