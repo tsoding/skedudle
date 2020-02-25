@@ -71,6 +71,10 @@ int main(void)
         SLT("[0C]"),
         SLT("\"\\uD834\\uDD1E\\uD834\\uDD1E\\uD834\\uDD1E\\uD834\\uDD1E\""),
         SLT("\"\\uD834\\uDD1E\\uD834\\uDD1E\\uD834\\uDD1E\\uD834\""),
+        SLT("[\"a\0a\"]"),
+        SLT("[\"\\\\a\"]"),
+        SLT("[\"\\\"\"]"),
+        SLT("[\"new\aline\"]")
     };
     size_t tests_count = sizeof(tests) / sizeof(tests[0]);
 

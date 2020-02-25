@@ -299,7 +299,9 @@ static Json_Result parse_escape_sequence(Memory *memory, String source)
         {'n', '\n'},
         {'r', '\r'},
         {'t', '\t'},
-        {'/',  '/'},
+        {'/', '/'},
+        {'\\', '\\'},
+        {'"', '"'},
     };
     static const size_t unescape_map_size =
         sizeof(unescape_map) / sizeof(unescape_map[0]);
@@ -468,6 +470,8 @@ static Json_Result parse_json_string(Memory *memory, String source)
 
             source = result.rest;
         } else {
+            // TODO: json parser source should be an array of unicode points instead of chars
+
             assert(buffer_size < buffer_capacity);
             buffer[buffer_size++] = *source.data;
             chop(&source, 1);
