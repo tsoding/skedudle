@@ -1,5 +1,5 @@
 CFLAGS=-Wall -Wextra -Wno-unused-result -pedantic -std=c11 -I./third_party/frozen/ -ggdb
-CS=src/main.c src/schedule.c src/json.c
+CS=src/main.c src/schedule.c src/json.c src/utf8.c
 HS=src/s.h src/request.h src/response.h src/error_page_template.h src/schedule.h src/rest_map_template.h src/json.h
 LIBS=-lm
 
@@ -23,8 +23,8 @@ src/error_page_template.h: tt src/error_page_template.h.tt
 src/rest_map_template.h: tt src/rest_map_template.h.tt
 	./tt src/rest_map_template.h.tt > src/rest_map_template.h
 
-json_test: src/json.c src/json_test.c src/s.h src/memory.h
-	$(CC) $(CFLAGS) -o json_test src/json.c src/json_test.c $(LIBS)
+json_test: src/json.c src/json_test.c src/s.h src/memory.h src/utf8.h src/utf8.c
+	$(CC) $(CFLAGS) -o json_test src/json.c src/json_test.c src/utf8.c $(LIBS)
 
-json_check: src/json.c src/json_check.c src/s.h src/memory.h
-	$(CC) $(CFLAGS) -o json_check src/json.c src/json_check.c $(LIBS)
+json_check: src/json.c src/json_check.c src/s.h src/memory.h src/utf8.h src/utf8.c
+	$(CC) $(CFLAGS) -o json_check src/json.c src/json_check.c src/utf8.c $(LIBS)

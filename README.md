@@ -28,3 +28,7 @@ You can support my work via
 
 - Twitch channel: https://www.twitch.tv/subs/tsoding
 - Patreon: https://www.patreon.com/tsoding
+
+## References
+
+- https://github.com/stedolan/jq/blob/9b51a0852a0f91fbc987f5f2b302ff65e22f6399/src/jv_parse.c#L455

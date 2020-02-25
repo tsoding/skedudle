@@ -68,7 +68,9 @@ int main(void)
             "}"),
         SLT("[0e+1]"),
         SLT("[0e+-1]"),
-        SLT("[0C]")
+        SLT("[0C]"),
+        SLT("\"\\uD834\\uDD1E\\uD834\\uDD1E\\uD834\\uDD1E\\uD834\\uDD1E\""),
+        SLT("\"\\uD834\\uDD1E\\uD834\\uDD1E\\uD834\\uDD1E\\uD834\""),
     };
     size_t tests_count = sizeof(tests) / sizeof(tests[0]);
 

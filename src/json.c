@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include "json.h"
+#include "utf8.h"
 
 static Json_Value json_null = { .type = JSON_NULL };
 static Json_Value json_true = { .type = JSON_BOOLEAN, .boolean = 1 };
@@ -277,41 +278,199 @@ static Json_Result parse_json_string_literal(String source)
     };
 }
 
-static Json_Result parse_json_string(Memory *memory, String source)
+static int32_t unhex(char x)
 {
-    Json_Result result = parse_json_string_literal(source);
-    if (result.is_error) return result;
-    assert(result.value.type == JSON_STRING);
+    x = tolower(x);
 
-    char *buffer = memory_alloc(memory, result.value.string.len);
-    size_t buffer_size = 0;
+    if ('0' <= x && x <= '9') {
+        return x - '0';
+    } else if ('a' <= x && x <= 'f') {
+        return x - 'a' + 10;
+    }
 
+    return -1;
+}
+
+static Json_Result parse_escape_sequence(Memory *memory, String source)
+{
     static char unescape_map[][2] = {
         {'b', '\b'},
         {'f', '\f'},
         {'n', '\n'},
         {'r', '\r'},
         {'t', '\t'},
+        {'/',  '/'},
     };
-    static const size_t unescape_map_size = sizeof(unescape_map) / sizeof(unescape_map[0]);
+    static const size_t unescape_map_size =
+        sizeof(unescape_map) / sizeof(unescape_map[0]);
 
-    for (size_t i = 0; i < result.value.string.len; ++i) {
-        if (result.value.string.data[i] == '\\' && i + 1 < result.value.string.len) {
-            int unescaped = 0;
-            for (size_t j = 0; j < unescape_map_size; ++j) {
-                if (unescape_map[j][0] == result.value.string.data[i + 1]) {
-                    buffer[buffer_size++] = unescape_map[j][1];
-                    unescaped = 1;
-                    break;
+    if (source.len == 0 || *source.data != '\\') {
+        return (Json_Result) {
+            .is_error = 1,
+            .rest = source,
+            .message = "Expected '\\'",
+        };
+    }
+    chop(&source, 1);
+
+    if (source.len <= 0) {
+        return (Json_Result) {
+            .is_error = 1,
+            .rest = source,
+            .message = "Unfinished escape sequence",
+        };
+    }
+
+    for (size_t i = 0; i < unescape_map_size; ++i) {
+        if (unescape_map[i][0] == *source.data) {
+            return (Json_Result) {
+                .rest = drop(source, 1),
+                .value = {
+                    .type = JSON_STRING,
+                    .string = {
+                        .len = 1,
+                        .data = &unescape_map[i][1]
+                    }
                 }
+            };
+        }
+    }
+
+    if (*source.data != 'u') {
+        return (Json_Result) {
+            .is_error = 1,
+            .rest = source,
+            .message = "Unknown escape sequence"
+        };
+    }
+    chop(&source, 1);
+
+    if (source.len < 4) {
+        return (Json_Result) {
+            .is_error = 1,
+            .rest = source,
+            .message = "Incomplete unicode point escape sequence"
+        };
+    }
+
+    uint32_t rune = 0;
+    for (int i = 0; i < 4; ++i) {
+        int32_t x = unhex(*source.data);
+        if (x < 0) {
+            return (Json_Result) {
+                .is_error = 1,
+                .rest = source,
+                .message = "Incorrect hex digit"
+            };
+        }
+        rune = rune * 0x10 + x;
+        chop(&source, 1);
+    }
+
+    if (0xD800 <= rune && rune <= 0xDBFF) {
+        // TODO: surrogate pairs
+        if (source.len < 6) {
+            return (Json_Result) {
+                .is_error = 1,
+                .rest = source,
+                .message = "Unfinished surrogate pair"
+            };
+        }
+
+        if (*source.data != '\\') {
+            return (Json_Result) {
+                .is_error = 1,
+                .rest = source,
+                .message = "Unfinished surrogate pair. Expected '\\'",
+            };
+        }
+        chop(&source, 1);
+
+        if (*source.data != 'u') {
+            return (Json_Result) {
+                .is_error = 1,
+                .rest = source,
+                .message = "Unfinished surrogate pair. Expected 'u'",
+            };
+        }
+        chop(&source, 1);
+
+        uint32_t surrogate = 0;
+        for (int i = 0; i < 4; ++i) {
+            int32_t x = unhex(*source.data);
+            if (x < 0) {
+                return (Json_Result) {
+                    .is_error = 1,
+                        .rest = source,
+                        .message = "Incorrect hex digit"
+                        };
             }
+            surrogate = surrogate * 0x10 + x;
+            chop(&source, 1);
+        }
 
-            if (unescaped) continue;
+        if (!(0xDC00 <= surrogate && surrogate <= 0xDFFF)) {
+            return (Json_Result) {
+                .is_error = 1,
+                .rest = source,
+                .message = "Invalid surrogate pair"
+            };
+        }
 
-            // TODO(#29): parse_json_string does not support \u
-            buffer[buffer_size++] = result.value.string.data[i + 1];
+        rune = 0x10000 + (((rune - 0xD800) << 10) |(surrogate - 0xDC00));
+    }
+
+    if (rune > 0x10FFFF) {
+        rune = 0xFFFD;
+    }
+
+    Utf8_Chunk utf8_chunk = utf8_encode_rune(rune);
+    assert(utf8_chunk.size > 0);
+
+    char *data = memory_alloc(memory, utf8_chunk.size);
+    memcpy(data, utf8_chunk.buffer, utf8_chunk.size);
+
+    return (Json_Result){
+        .value = {
+            .type = JSON_STRING,
+            .string = {
+                .len = utf8_chunk.size,
+                .data = data
+            }
+        },
+        .rest = source
+    };
+}
+
+static Json_Result parse_json_string(Memory *memory, String source)
+{
+    Json_Result result = parse_json_string_literal(source);
+    if (result.is_error) return result;
+    assert(result.value.type == JSON_STRING);
+
+    const size_t buffer_capacity = result.value.string.len;
+    source = result.value.string;
+    String rest = result.rest;
+
+    char *buffer = memory_alloc(memory, buffer_capacity);
+    size_t buffer_size = 0;
+
+    while (source.len) {
+        if (*source.data == '\\') {
+            result = parse_escape_sequence(memory, source);
+            if (result.is_error) return result;
+            assert(result.value.type == JSON_STRING);
+            assert(buffer_size + result.value.string.len <= buffer_capacity);
+            memcpy(buffer + buffer_size,
+                   result.value.string.data,
+                   result.value.string.len);
+            buffer_size += result.value.string.len;
+
+            source = result.rest;
         } else {
-            buffer[buffer_size++] = result.value.string.data[i];
+            assert(buffer_size < buffer_capacity);
+            buffer[buffer_size++] = *source.data;
+            chop(&source, 1);
         }
     }
 
@@ -323,7 +482,7 @@ static Json_Result parse_json_string(Memory *memory, String source)
                 .len = buffer_size
             },
         },
-        .rest = result.rest
+        .rest = rest
     };
 }
 
