@@ -370,7 +370,6 @@ static Json_Result parse_escape_sequence(Memory *memory, String source)
     }
 
     if (0xD800 <= rune && rune <= 0xDBFF) {
-        // TODO: surrogate pairs
         if (source.len < 6) {
             return (Json_Result) {
                 .is_error = 1,
@@ -470,8 +469,7 @@ static Json_Result parse_json_string(Memory *memory, String source)
 
             source = result.rest;
         } else {
-            // TODO: json parser source should be an array of unicode points instead of chars
-
+            // TODO: json parser is not aware of the input encoding
             assert(buffer_size < buffer_capacity);
             buffer[buffer_size++] = *source.data;
             chop(&source, 1);
