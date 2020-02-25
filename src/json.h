@@ -7,6 +7,8 @@
 #include "s.h"
 #include "memory.h"
 
+#define JSON_DEPTH_MAX_LIMIT 100
+
 typedef enum {
     JSON_NULL = 0,
     JSON_BOOLEAN,

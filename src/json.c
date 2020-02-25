@@ -5,6 +5,9 @@ static Json_Value json_null = { .type = JSON_NULL };
 static Json_Value json_true = { .type = JSON_BOOLEAN, .boolean = 1 };
 static Json_Value json_false = { .type = JSON_BOOLEAN, .boolean = 0 };
 
+static
+Json_Result parse_json_value_impl(Memory *memory, String source, int level);
+
 int json_isspace(char c)
 {
     return c == 0x20 || c == 0x0A || c == 0x0D || c == 0x09;
@@ -324,7 +327,7 @@ static Json_Result parse_json_string(Memory *memory, String source)
     };
 }
 
-static Json_Result parse_json_array(Memory *memory, String source)
+static Json_Result parse_json_array(Memory *memory, String source, int level)
 {
     assert(memory);
 
@@ -356,7 +359,7 @@ static Json_Result parse_json_array(Memory *memory, String source)
     Json_Array array = {0};
 
     while(source.len > 0) {
-        Json_Result item_result = parse_json_value(memory, source);
+        Json_Result item_result = parse_json_value_impl(memory, source, level + 1);
         if(item_result.is_error) {
             return item_result;
         }
@@ -401,7 +404,7 @@ static Json_Result parse_json_array(Memory *memory, String source)
     };
 }
 
-static Json_Result parse_json_object(Memory *memory, String source)
+static Json_Result parse_json_object(Memory *memory, String source, int level)
 {
     assert(memory);
 
@@ -451,7 +454,7 @@ static Json_Result parse_json_object(Memory *memory, String source)
 
         chop(&source, 1);
 
-        Json_Result value_result = parse_json_value(memory, source);
+        Json_Result value_result = parse_json_value_impl(memory, source, level + 1);
         if (value_result.is_error) {
             return value_result;
         }
@@ -496,8 +499,17 @@ static Json_Result parse_json_object(Memory *memory, String source)
     };
 }
 
-Json_Result parse_json_value(Memory *memory, String source)
+static
+Json_Result parse_json_value_impl(Memory *memory, String source, int level)
 {
+    if (level >= JSON_DEPTH_MAX_LIMIT) {
+        return (Json_Result) {
+            .is_error = 1,
+            .message = "Reach the max limit of depth",
+            .rest = source
+        };
+    }
+
     source = json_trim_begin(source);
 
     if (source.len == 0) {
@@ -513,11 +525,16 @@ Json_Result parse_json_value(Memory *memory, String source)
     case 't': return parse_token(source, SLT("true"), json_true, "Expected `true`");
     case 'f': return parse_token(source, SLT("false"), json_false, "Expected `false`");
     case '"': return parse_json_string(memory, source);
-    case '[': return parse_json_array(memory, source);
-    case '{': return parse_json_object(memory, source);
+    case '[': return parse_json_array(memory, source, level);
+    case '{': return parse_json_object(memory, source, level);
     }
 
     return parse_json_number(source);
+}
+
+Json_Result parse_json_value(Memory *memory, String source)
+{
+    return parse_json_value_impl(memory, source, 0);
 }
 
 static
