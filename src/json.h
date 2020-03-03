@@ -87,6 +87,7 @@ struct Json_Object_Page {
     Json_Object_Member elements[JSON_OBJECT_PAGE_CAPACITY];
 };
 
+// TODO(#40): parse_json_value is not aware of input encoding
 Json_Result parse_json_value(Memory *memory, String source);
 void print_json_error(FILE *stream, Json_Result result, String source, const char *prefix);
 void print_json_value(FILE *stream, Json_Value value);
