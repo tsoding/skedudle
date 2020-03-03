@@ -846,7 +846,7 @@ void print_json_error(FILE *stream, Json_Result result,
     for (size_t line_number = 1; source.len; ++line_number) {
         String line = chop_line(&source);
 
-        if (n < line.len) {
+        if (n <= line.len) {
             fprintf(stream, "%s:%ld: %s\n", prefix, line_number, result.message);
             fwrite(line.data, 1, line.len, stream);
             fputc('\n', stream);
