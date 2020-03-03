@@ -248,11 +248,18 @@ static Json_Result parse_json_string_literal(String source)
         .len = 0
     };
 
-    int escape = 0;
-    while (source.len && (*source.data != '"' || escape)) {
-        escape = 0;
+    while (source.len && *source.data != '"') {
         if (*source.data == '\\') {
-            escape = 1;
+            s.len++;
+            chop(&source, 1);
+
+            if (source.len == 0) {
+                return (Json_Result) {
+                    .is_error = 1,
+                    .rest = source,
+                    .message = "Unfinished escape sequence",
+                };
+            }
         }
 
         s.len++;

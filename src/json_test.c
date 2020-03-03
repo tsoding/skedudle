@@ -74,7 +74,8 @@ int main(void)
         SLT("[\"a\0a\"]"),
         SLT("[\"\\\\a\"]"),
         SLT("[\"\\\"\"]"),
-        SLT("[\"new\aline\"]")
+        SLT("[\"new\aline\"]"),
+        SLT("{\"test\": [0, true, 1], \"foo\": [{\"param\": \"data:text/html],https://1:a.it@www.it\\\\\"}, -889578990, false]}")
     };
     size_t tests_count = sizeof(tests) / sizeof(tests[0]);
 
