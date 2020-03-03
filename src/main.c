@@ -24,7 +24,7 @@
 #include "request.h"
 #include "memory.h"
 #include "schedule.h"
-#include "frozen.h"
+#include "json.h"
 
 #define REQUEST_BUFFER_CAPACITY (640 * KILO)
 char request_buffer[REQUEST_BUFFER_CAPACITY];
@@ -94,41 +94,6 @@ int serve_file(int dest_fd,
     return 0;
 }
 
-int print_json_escaped_string(int fd, const char *p, size_t len) {
-    size_t i, cl, n = 0;
-    const char *hex_digits = "0123456789abcdef";
-    const char *specials = "btnvfr";
-
-    for (i = 0; i < len; i++) {
-        unsigned char ch = ((unsigned char *) p)[i];
-        if (ch == '"' || ch == '\\') {
-            n += write(fd, "\\", 1);
-            n += write(fd, p + i, 1);
-        } else if (ch >= '\b' && ch <= '\r') {
-            n += write(fd, "\\", 1);
-            n += write(fd, &specials[ch - '\b'], 1);
-        } else if (isprint(ch)) {
-            n += write(fd, p + i, 1);
-        } else if ((cl = json_get_utf8_char_len(ch)) == 1) {
-            n += write(fd, "\\u00", 4);
-            n += write(fd, &hex_digits[(ch >> 4) % 0xf], 1);
-            n += write(fd, &hex_digits[ch % 0xf], 1);
-        } else {
-            n += write(fd, p + i, cl);
-            i += cl - 1;
-        }
-    }
-
-    return n;
-}
-
-void print_json_string_literal(int fd, const char *literal)
-{
-    write(fd, "\"", 1);
-    print_json_escaped_string(fd, literal, strlen(literal));
-    write(fd, "\"", 1);
-}
-
 int is_cancelled(struct Schedule *schedule, time_t id)
 {
     for (size_t i = 0; i < schedule->cancelled_events_count; ++i) {
@@ -149,26 +114,38 @@ time_t id_of_event(struct Event event)
     return timegm(&event.date) + timezone + event.time_min * 60;
 }
 
-void print_event(int dest_fd, struct Event event)
+Json_Value event_as_json(Memory *memory, struct Event event)
 {
-    write(dest_fd, "{", 1);
-    print_json_string_literal(dest_fd, "id");
-    write(dest_fd, ":", 1);
-    dprintf(dest_fd, "%ld", id_of_event(event));
-    write(dest_fd, ",", 1);
-    print_json_string_literal(dest_fd, "title");
-    write(dest_fd, ":", 1);
-    print_json_string_literal(dest_fd, event.title);
-    write(dest_fd, ",", 1);
-    print_json_string_literal(dest_fd, "description");
-    write(dest_fd, ":", 1);
-    print_json_string_literal(dest_fd, event.description);
-    write(dest_fd, ",", 1);
-    print_json_string_literal(dest_fd, "url");
-    write(dest_fd, ":", 1);
-    print_json_string_literal(dest_fd, event.url);
-    write(dest_fd, "}", 1);
-    write(dest_fd, "\n", 1);
+    assert(memory);
+    assert(!"TODO: event_as_json is not implemented");
+    (void) event;
+
+    // write(dest_fd, "{", 1);
+    // print_json_string_literal(dest_fd, "id");
+    // write(dest_fd, ":", 1);
+    // dprintf(dest_fd, "%ld", id_of_event(event));
+    // write(dest_fd, ",", 1);
+    // print_json_string_literal(dest_fd, "title");
+    // write(dest_fd, ":", 1);
+    // print_json_string_literal(dest_fd, event.title);
+    // write(dest_fd, ",", 1);
+    // print_json_string_literal(dest_fd, "description");
+    // write(dest_fd, ":", 1);
+    // print_json_string_literal(dest_fd, event.description);
+    // write(dest_fd, ",", 1);
+    // print_json_string_literal(dest_fd, "url");
+    // write(dest_fd, ":", 1);
+    // print_json_string_literal(dest_fd, event.url);
+    // write(dest_fd, "}", 1);
+    // write(dest_fd, "\n", 1);
+
+    return json_null;
+}
+
+void print_event(int dest_fd, Memory *memory, struct Event event)
+{
+    Json_Value event_json = event_as_json(memory, event);
+    print_json_value_fd(dest_fd, event_json);
 }
 
 int next_event(time_t current_time,
@@ -245,7 +222,7 @@ int next_event(time_t current_time,
     return result_id >= 0;
 }
 
-int serve_next_stream(int dest_fd, struct Schedule *schedule)
+int serve_next_stream(int dest_fd, Memory *memory, struct Schedule *schedule)
 {
     response_status_line(dest_fd, 200);
     response_header(dest_fd, "Content-Type", "application/json");
@@ -254,7 +231,7 @@ int serve_next_stream(int dest_fd, struct Schedule *schedule)
     time_t current_time = time(NULL) - timezone;
     struct Event event;
     if (next_event(current_time, schedule, &event)) {
-        print_event(dest_fd, event);
+        print_event(dest_fd, memory, event);
     }
 
     return 0;
@@ -262,22 +239,16 @@ int serve_next_stream(int dest_fd, struct Schedule *schedule)
 
 int serve_rest_map(int dest_fd, String host)
 {
-    response_status_line(dest_fd, 200);
-    response_header(dest_fd, "Content-Type", "application/json");
-    response_body_start(dest_fd);
-
-#define OUT dest_fd
-#define HOST print_json_escaped_string(dest_fd, host.data, host.len);
-#define PROTOCOL write(dest_fd, "http", 4);
-#include "rest_map_template.h"
-#undef OUT
-#undef HOST
-#undef PROTOCOL
-
+    (void) dest_fd;
+    (void) host;
+    assert(!"TODO: serve_rest_map is not implemented");
+    // {
+    //     "next_stream":  "%PROTOCOL%://%HOST%/next_stream"
+    // }
     return 0;
 }
 
-int handle_request(int fd, struct sockaddr_in *addr, struct Schedule *schedule)
+int handle_request(int fd, struct sockaddr_in *addr, Memory *memory, struct Schedule *schedule)
 {
     assert(addr);
 
@@ -321,13 +292,13 @@ int handle_request(int fd, struct sockaddr_in *addr, struct Schedule *schedule)
     }
 
     if (string_equal(status_line.path, SLT("/next_stream"))) {
-        return serve_next_stream(fd, schedule);
+        return serve_next_stream(fd, memory, schedule);
     }
 
     return http_error(fd, 404, "Unknown path\n");
 }
 
-#define MEMORY_CAPACITY (640 * KILO)
+#define MEMORY_CAPACITY (1 * MEGA)
 
 String mmap_file_to_string(const char *filepath)
 {
@@ -355,25 +326,6 @@ void munmap_string(String s)
     munmap((void*) s.data, s.len);
 }
 
-Memory json_memory = {
-    .capacity = MEMORY_CAPACITY
-};
-
-void *json_memory_alloc(size_t size)
-{
-    return memory_alloc(&json_memory, size);
-}
-
-void json_memory_free(void *ptr)
-{
-    (void)ptr;
-}
-
-Allocator allocator = {
-    .alloc = json_memory_alloc,
-    .free = json_memory_free
-};
-
 int main(int argc, char *argv[])
 {
     if (argc < 3) {
@@ -388,11 +340,26 @@ int main(int argc, char *argv[])
         addr = argv[3];
     }
 
-    json_memory.buffer = malloc(json_memory.capacity);
+    Memory json_memory = {
+        .capacity = MEMORY_CAPACITY,
+        .buffer = malloc(MEMORY_CAPACITY)
+    };
+    assert(json_memory.buffer);
+
+    Memory request_memory = {
+        .capacity = MEMORY_CAPACITY,
+        .buffer = malloc(MEMORY_CAPACITY)
+    };
+    assert(request_memory.buffer);
 
     String input = mmap_file_to_string(filepath);
-    struct Schedule schedule;
-    json_scan_schedule(input, &schedule);
+    Json_Result result = parse_json_value(&json_memory, input);
+    if (result.is_error) {
+        print_json_error(stderr, result, input, filepath);
+        exit(1);
+    }
+    printf("Parsing consumed %ld bytes of memory\n", json_memory.size);
+    struct Schedule schedule = json_as_schedule(&json_memory, result.value);
     munmap_string(input);
 
     if (schedule.timezone == NULL) {
@@ -458,7 +425,7 @@ int main(int argc, char *argv[])
 
         assert(client_addrlen == sizeof(client_addr));
 
-        handle_request(client_fd, &client_addr, &schedule);
+        handle_request(client_fd, &client_addr, &request_memory, &schedule);
 
         err = close(client_fd);
         if (err < 0) {
@@ -467,6 +434,7 @@ int main(int argc, char *argv[])
     }
 
     free(json_memory.buffer);
+    free(request_memory.buffer);
 
     return 0;
 }

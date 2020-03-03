@@ -20,7 +20,7 @@ typedef enum {
 
 typedef struct Json_Value Json_Value;
 
-#define JSON_ARRAY_PAGE_CAPACITY 1024
+#define JSON_ARRAY_PAGE_CAPACITY 128
 
 typedef struct Json_Array_Page Json_Array_Page;
 
@@ -79,7 +79,11 @@ typedef struct {
     Json_Value value;
 } Json_Object_Member;
 
-#define JSON_OBJECT_PAGE_CAPACITY 1024
+#define JSON_OBJECT_PAGE_CAPACITY 128
+
+extern Json_Value json_null;
+extern Json_Value json_true;
+extern Json_Value json_false;
 
 struct Json_Object_Page {
     Json_Object_Page *next;
@@ -87,9 +91,12 @@ struct Json_Object_Page {
     Json_Object_Member elements[JSON_OBJECT_PAGE_CAPACITY];
 };
 
+void json_object_push(Memory *memory, Json_Object *object, String key, Json_Value value);
+
 // TODO(#40): parse_json_value is not aware of input encoding
 Json_Result parse_json_value(Memory *memory, String source);
 void print_json_error(FILE *stream, Json_Result result, String source, const char *prefix);
 void print_json_value(FILE *stream, Json_Value value);
+void print_json_value_fd(int fd, Json_Value value);
 
 #endif  // JSON_H_
