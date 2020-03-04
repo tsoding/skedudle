@@ -880,5 +880,5 @@ void print_json_value_fd(int fd, Json_Value value)
 {
     (void) fd;
     (void) value;
-    assert(!"TODO: print_json_value_fd is not implemented");
+    assert(!"TODO(#45): print_json_value_fd is not implemented");
 }
