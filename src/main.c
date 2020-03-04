@@ -241,7 +241,7 @@ int serve_rest_map(int dest_fd, String host)
 {
     (void) dest_fd;
     (void) host;
-    assert(!"TODO: serve_rest_map is not implemented");
+    assert(!"TODO(#43): serve_rest_map is not implemented");
     // {
     //     "next_stream":  "%PROTOCOL%://%HOST%/next_stream"
     // }
