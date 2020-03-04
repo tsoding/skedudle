@@ -5,6 +5,7 @@
 #include <stdint.h>
 #include "s.h"
 #include "memory.h"
+#include "json.h"
 
 struct Project
 {
@@ -39,6 +40,6 @@ struct Schedule
     const char *timezone;
 };
 
-void json_scan_schedule(String input, struct Schedule *schedule);
+struct Schedule json_as_schedule(Memory *memory, Json_Value input);
 
 #endif  // SCHEDULE_H_

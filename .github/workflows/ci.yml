@@ -6,9 +6,5 @@ jobs:
     runs-on: ubuntu-18.04
     steps:
       - uses: actions/checkout@v1
-      - name: submodule
-        run: git submodule update --init --recursive
       - name: build
         run: make
-      - name: frozen test
-        run: ./frozen_test

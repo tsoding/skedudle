@@ -2,9 +2,9 @@
 #include "json.h"
 #include "utf8.h"
 
-static Json_Value json_null = { .type = JSON_NULL };
-static Json_Value json_true = { .type = JSON_BOOLEAN, .boolean = 1 };
-static Json_Value json_false = { .type = JSON_BOOLEAN, .boolean = 0 };
+Json_Value json_null = { .type = JSON_NULL };
+Json_Value json_true = { .type = JSON_BOOLEAN, .boolean = 1 };
+Json_Value json_false = { .type = JSON_BOOLEAN, .boolean = 0 };
 
 static
 Json_Result parse_json_value_impl(Memory *memory, String source, int level);
@@ -874,4 +874,11 @@ void print_json_error(FILE *stream, Json_Result result,
         fwrite(line.data, 1, line.len, stream);
         fputc('\n', stream);
     }
+}
+
+void print_json_value_fd(int fd, Json_Value value)
+{
+    (void) fd;
+    (void) value;
+    assert(!"TODO(#45): print_json_value_fd is not implemented");
 }
