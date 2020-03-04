@@ -117,7 +117,7 @@ time_t id_of_event(struct Event event)
 Json_Value event_as_json(Memory *memory, struct Event event)
 {
     assert(memory);
-    assert(!"TODO: event_as_json is not implemented");
+    assert(!"TODO(#42): event_as_json is not implemented");
     (void) event;
 
     // write(dest_fd, "{", 1);
