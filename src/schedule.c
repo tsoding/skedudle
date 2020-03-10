@@ -5,62 +5,6 @@
 
 #include "schedule.h"
 
-// static
-// void json_scan_cancelled_events(const char *str, int str_len,
-//                                 struct Schedule *schedule)
-// {
-//     schedule->cancelled_events_count = json_array_len(str, str_len);
-//     schedule->cancelled_events = allocator.alloc(
-//         schedule->cancelled_events_count * sizeof(time_t));
-
-//     struct json_token t;
-//     for (int i = 0;
-//          json_scanf_array_elem(str, str_len, "", i, &t) > 0;
-//          i++)
-//     {
-//         json_scanf(t.ptr, t.len, "%ld", schedule->cancelled_events + i);
-//     }
-// }
-
-// static
-// void json_scan_event(const char *str, int str_len,
-//                      struct Event *event)
-// {
-//     json_scanf(
-//         str, str_len,
-//         "{"
-//         "    date: %M,"
-//         "    time: %M,"
-//         "    title: %Q,"
-//         "    description: %Q,"
-//         "    url: %Q,"
-//         "    channel: %Q"
-//         "}",
-//         json_scan_date, &event->date,
-//         json_scan_time, &event->time_min,
-//         &event->title,
-//         &event->description,
-//         &event->url,
-//         &event->channel);
-// }
-
-// static
-// void json_scan_extra_events(const char *str, int str_len,
-//                             struct Schedule *schedule)
-// {
-//     schedule->extra_events_size = json_array_len(str, str_len);
-//     schedule->extra_events = allocator.alloc(
-//         schedule->extra_events_size * sizeof(struct Event));
-
-//     struct json_token t;
-//     for (int i = 0;
-//          json_scanf_array_elem(str, str_len, "", i, &t) > 0;
-//          i++)
-//     {
-//         json_scan_event(t.ptr, t.len, &schedule->extra_events[i]);
-//     }
-// }
-
 static
 void expect_json_type(Json_Value value, Json_Type type)
 {
