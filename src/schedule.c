@@ -215,7 +215,7 @@ struct Schedule json_as_schedule(Memory *memory, Json_Value input)
             if (string_equal(page->elements[page_index].key, SLT("projects"))) {
                 parse_schedule_projects(memory, page->elements[page_index].value, &schedule);
             } else if (string_equal(page->elements[page_index].key, SLT("cancelledEvents"))) {
-                // TODO: cancelledEvents deserialization is not implemented
+                // TODO(#47): cancelledEvents deserialization is not implemented
             } else if (string_equal(page->elements[page_index].key, SLT("extraEvents"))) {
                 // TODO: extraEvents deserialization is not implemented
             } else if (string_equal(page->elements[page_index].key, SLT("timezone"))) {
