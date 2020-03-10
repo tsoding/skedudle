@@ -18,6 +18,21 @@ typedef enum {
     JSON_OBJECT
 } Json_Type;
 
+static inline
+const char *json_type_as_cstr(Json_Type type)
+{
+    switch (type) {
+    case JSON_NULL: return "JSON_NULL";
+    case JSON_BOOLEAN: return "JSON_BOOLEAN";
+    case JSON_NUMBER: return "JSON_NUMBER";
+    case JSON_STRING: return "JSON_STRING";
+    case JSON_ARRAY: return "JSON_ARRAY";
+    case JSON_OBJECT: return "JSON_OBJECT";
+    }
+
+    assert(!"Incorrect Json_Type");
+}
+
 typedef struct Json_Value Json_Value;
 
 #define JSON_ARRAY_PAGE_CAPACITY 128
@@ -66,6 +81,19 @@ struct Json_Array_Page {
     size_t size;
     Json_Value elements[JSON_ARRAY_PAGE_CAPACITY];
 };
+
+static inline
+size_t json_array_size(Json_Array array)
+{
+    size_t size = 0;
+    for (Json_Array_Page *page = array.begin;
+         page != NULL;
+         page = page->next)
+    {
+        size += page->size;
+    }
+    return size;
+}
 
 typedef struct {
     Json_Value value;

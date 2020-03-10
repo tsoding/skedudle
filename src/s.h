@@ -5,6 +5,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "memory.h"
+
 typedef struct  {
     size_t len;
     const char *data;
@@ -19,6 +21,16 @@ String string(size_t len, const char *data)
     };
 
     return result;
+}
+
+static inline
+const char *string_as_cstr(Memory *memory, String s)
+{
+    assert(memory);
+    char *cstr = memory_alloc(memory, s.len + 1);
+    memcpy(cstr, s.data, s.len);
+    cstr[s.len] = '\0';
+    return cstr;
 }
 
 #define SLT(literal) string(sizeof(literal) - 1, literal)
