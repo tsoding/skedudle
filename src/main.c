@@ -273,7 +273,7 @@ int handle_request(int fd, struct sockaddr_in *addr, Memory *memory, struct Sche
 
     String host = {0};
     String header_line = trim(chop_line(&buffer));
-    Header header = {0};
+    Header header = {{0}, {0}};
     while (header_line.len > 0) {
         header = parse_header(header_line);
         if (string_equal(header.name, SLT("Host"))) {
