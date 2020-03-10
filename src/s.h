@@ -24,6 +24,12 @@ String string(size_t len, const char *data)
 }
 
 static inline
+String cstr_as_string(const char *cstr)
+{
+    return string(strlen(cstr), cstr);
+}
+
+static inline
 const char *string_as_cstr(Memory *memory, String s)
 {
     assert(memory);

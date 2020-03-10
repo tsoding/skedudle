@@ -117,29 +117,27 @@ time_t id_of_event(struct Event event)
 Json_Value event_as_json(Memory *memory, struct Event event)
 {
     assert(memory);
-    assert(!"TODO(#42): event_as_json is not implemented");
-    (void) event;
 
-    // write(dest_fd, "{", 1);
-    // print_json_string_literal(dest_fd, "id");
-    // write(dest_fd, ":", 1);
-    // dprintf(dest_fd, "%ld", id_of_event(event));
-    // write(dest_fd, ",", 1);
-    // print_json_string_literal(dest_fd, "title");
-    // write(dest_fd, ":", 1);
-    // print_json_string_literal(dest_fd, event.title);
-    // write(dest_fd, ",", 1);
-    // print_json_string_literal(dest_fd, "description");
-    // write(dest_fd, ":", 1);
-    // print_json_string_literal(dest_fd, event.description);
-    // write(dest_fd, ",", 1);
-    // print_json_string_literal(dest_fd, "url");
-    // write(dest_fd, ":", 1);
-    // print_json_string_literal(dest_fd, event.url);
-    // write(dest_fd, "}", 1);
-    // write(dest_fd, "\n", 1);
+    const time_t id = id_of_event(event);
+    const size_t id_cstr_size = 256;
+    char *id_cstr = memory_alloc(memory, id_cstr_size);
+    snprintf(id_cstr, id_cstr_size, "%ld", id);
 
-    return json_null;
+    Json_Object object = {0};
+
+    json_object_push(memory, &object, SLT("id"),
+                     json_string(cstr_as_string(id_cstr)));
+    json_object_push(memory, &object, SLT("title"),
+                     json_string(cstr_as_string(event.title)));
+    json_object_push(memory, &object, SLT("description"),
+                     json_string(cstr_as_string(event.description)));
+    json_object_push(memory, &object, SLT("url"),
+                     json_string(cstr_as_string(event.url)));
+
+    return (Json_Value) {
+        .type = JSON_OBJECT,
+        .object = object
+    };
 }
 
 void print_event(int dest_fd, Memory *memory, struct Event event)

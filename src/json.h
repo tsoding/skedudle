@@ -113,6 +113,8 @@ extern Json_Value json_null;
 extern Json_Value json_true;
 extern Json_Value json_false;
 
+Json_Value json_string(String string);
+
 struct Json_Object_Page {
     Json_Object_Page *next;
     size_t size;

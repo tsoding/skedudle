@@ -1,10 +1,22 @@
+#define _POSIX_C_SOURCE 200809L
+
 #include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
 #include "json.h"
 #include "utf8.h"
 
 Json_Value json_null = { .type = JSON_NULL };
 Json_Value json_true = { .type = JSON_BOOLEAN, .boolean = 1 };
 Json_Value json_false = { .type = JSON_BOOLEAN, .boolean = 0 };
+
+Json_Value json_string(String string)
+{
+    return (Json_Value) {
+        .type = JSON_STRING,
+        .string = string
+    };
+}
 
 static
 Json_Result parse_json_value_impl(Memory *memory, String source, int level);
@@ -876,9 +888,110 @@ void print_json_error(FILE *stream, Json_Result result,
     }
 }
 
+static
+void print_json_number_fd(int fd, Json_Number number)
+{
+    write(fd, number.integer.data, number.integer.len);
+
+    if (number.fraction.len > 0) {
+        write(fd, ".", 1);
+        write(fd, number.fraction.data, number.fraction.len);
+    }
+
+    if (number.exponent.len > 0) {
+        write(fd, "e", 1);
+        write(fd, number.exponent.data, number.exponent.len);
+    }
+}
+
+static
+void print_json_string_fd(int fd, String string)
+{
+    const char *hex_digits = "0123456789abcdef";
+    const char *specials = "btnvfr";
+    const char *p = string.data;
+
+    write(fd, "\"", 1);
+    size_t cl;
+    for (size_t i = 0; i < string.len; i++) {
+        unsigned char ch = ((unsigned char *) p)[i];
+        if (ch == '"' || ch == '\\') {
+            write(fd, "\\", 1);
+            write(fd, p + i, 1);
+        } else if (ch >= '\b' && ch <= '\r') {
+            write(fd, "\\", 1);
+            write(fd, &specials[ch - '\b'], 1);
+        } else if (isprint(ch)) {
+            write(fd, p + i, 1);
+        } else if ((cl = json_get_utf8_char_len(ch)) == 1) {
+            write(fd, "\\u00", 4);
+            write(fd, &hex_digits[(ch >> 4) % 0xf], 1);
+            write(fd, &hex_digits[ch % 0xf], 1);
+        } else {
+            write(fd, p + i, cl);
+            i += cl - 1;
+        }
+    }
+    write(fd, "\"", 1);
+}
+
+static
+void print_json_array_fd(int fd, Json_Array array)
+{
+    dprintf(fd, "[");
+    int t = 0;
+    for (Json_Array_Page *page = array.begin; page != NULL; page = page->next) {
+        for (size_t i = 0; i < page->size; ++i) {
+            if (t) {
+                dprintf(fd, ",");
+            } else {
+                t = 1;
+            }
+            print_json_value_fd(fd, page->elements[i]);
+        }
+    }
+    dprintf(fd, "]");
+}
+
+void print_json_object_fd(int fd, Json_Object object)
+{
+    dprintf(fd, "{");
+    int t = 0;
+    for (Json_Object_Page *page = object.begin; page != NULL; page = page->next) {
+        for (size_t i = 0; i < page->size; ++i) {
+            if (t) {
+                dprintf(fd, ",");
+            } else {
+                t = 1;
+            }
+            print_json_string_fd(fd, page->elements[i].key);
+            dprintf(fd, ":");
+            print_json_value_fd(fd, page->elements[i].value);
+        }
+    }
+    dprintf(fd, "}");
+}
+
 void print_json_value_fd(int fd, Json_Value value)
 {
-    (void) fd;
-    (void) value;
-    assert(!"TODO(#45): print_json_value_fd is not implemented");
+    switch (value.type) {
+    case JSON_NULL: {
+        dprintf(fd, "null");
+    } break;
+    case JSON_BOOLEAN: {
+        dprintf(fd, value.boolean ? "true" : "false");
+    } break;
+    case JSON_NUMBER: {
+        print_json_number_fd(fd, value.number);
+    } break;
+    case JSON_STRING: {
+        print_json_string_fd(fd, value.string);
+    } break;
+    case JSON_ARRAY: {
+        print_json_array_fd(fd, value.array);
+    } break;
+    case JSON_OBJECT: {
+        print_json_object_fd(fd, value.object);
+    } break;
+    }
 }
