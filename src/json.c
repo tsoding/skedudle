@@ -6,6 +6,14 @@ Json_Value json_null = { .type = JSON_NULL };
 Json_Value json_true = { .type = JSON_BOOLEAN, .boolean = 1 };
 Json_Value json_false = { .type = JSON_BOOLEAN, .boolean = 0 };
 
+Json_Value json_string(String string)
+{
+    return (Json_Value) {
+        .type = JSON_STRING,
+        .string = string
+    };
+}
+
 static
 Json_Result parse_json_value_impl(Memory *memory, String source, int level);
 
