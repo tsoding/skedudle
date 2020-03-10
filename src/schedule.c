@@ -217,7 +217,7 @@ struct Schedule json_as_schedule(Memory *memory, Json_Value input)
             } else if (string_equal(page->elements[page_index].key, SLT("cancelledEvents"))) {
                 // TODO(#47): cancelledEvents deserialization is not implemented
             } else if (string_equal(page->elements[page_index].key, SLT("extraEvents"))) {
-                // TODO: extraEvents deserialization is not implemented
+                // TODO(#48): extraEvents deserialization is not implemented
             } else if (string_equal(page->elements[page_index].key, SLT("timezone"))) {
                 expect_json_type(page->elements[page_index].value, JSON_STRING);
                 schedule.timezone = string_as_cstr(
