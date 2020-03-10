@@ -172,7 +172,7 @@ struct Event json_as_event(Memory *memory, Json_Value input)
 {
     assert(memory);
     (void) input;
-    assert(!"TODO: json_as_event is not implemented");
+    assert(!"TODO(#51): json_as_event is not implemented");
     return (struct Event) {0};
 }
 
