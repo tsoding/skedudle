@@ -5,62 +5,6 @@
 
 #include "schedule.h"
 
-// static
-// void json_scan_cancelled_events(const char *str, int str_len,
-//                                 struct Schedule *schedule)
-// {
-//     schedule->cancelled_events_count = json_array_len(str, str_len);
-//     schedule->cancelled_events = allocator.alloc(
-//         schedule->cancelled_events_count * sizeof(time_t));
-
-//     struct json_token t;
-//     for (int i = 0;
-//          json_scanf_array_elem(str, str_len, "", i, &t) > 0;
-//          i++)
-//     {
-//         json_scanf(t.ptr, t.len, "%ld", schedule->cancelled_events + i);
-//     }
-// }
-
-// static
-// void json_scan_event(const char *str, int str_len,
-//                      struct Event *event)
-// {
-//     json_scanf(
-//         str, str_len,
-//         "{"
-//         "    date: %M,"
-//         "    time: %M,"
-//         "    title: %Q,"
-//         "    description: %Q,"
-//         "    url: %Q,"
-//         "    channel: %Q"
-//         "}",
-//         json_scan_date, &event->date,
-//         json_scan_time, &event->time_min,
-//         &event->title,
-//         &event->description,
-//         &event->url,
-//         &event->channel);
-// }
-
-// static
-// void json_scan_extra_events(const char *str, int str_len,
-//                             struct Schedule *schedule)
-// {
-//     schedule->extra_events_size = json_array_len(str, str_len);
-//     schedule->extra_events = allocator.alloc(
-//         schedule->extra_events_size * sizeof(struct Event));
-
-//     struct json_token t;
-//     for (int i = 0;
-//          json_scanf_array_elem(str, str_len, "", i, &t) > 0;
-//          i++)
-//     {
-//         json_scan_event(t.ptr, t.len, &schedule->extra_events[i]);
-//     }
-// }
-
 static
 void expect_json_type(Json_Value value, Json_Type type)
 {
@@ -199,6 +143,62 @@ void parse_schedule_projects(Memory *memory, Json_Value input, struct Schedule *
     }
 }
 
+static
+void parse_schedule_cancelled_events(Memory *memory, Json_Value input, struct Schedule *schedule)
+{
+    assert(memory);
+    assert(schedule);
+    expect_json_type(input, JSON_ARRAY);
+
+    schedule->cancelled_events = memory_alloc(
+        memory,
+        sizeof(time_t) * json_array_size(input.array));
+    schedule->cancelled_events_count = 0;
+
+    for (Json_Array_Page *page = input.array.begin;
+         page != NULL;
+         page = page->next)
+    {
+        for (size_t page_index = 0; page_index < page->size; ++page_index) {
+            expect_json_type(page->elements[page_index], JSON_NUMBER);
+            schedule->cancelled_events[schedule->cancelled_events_count++] =
+                json_number_to_integer(page->elements[page_index].number);
+        }
+    }
+}
+
+static
+struct Event json_as_event(Memory *memory, Json_Value input)
+{
+    assert(memory);
+    (void) input;
+    assert(!"TODO(#51): json_as_event is not implemented");
+    return (struct Event) {0};
+}
+
+static
+void parse_schedule_extra_events(Memory *memory, Json_Value input, struct Schedule *schedule)
+{
+    assert(memory);
+    assert(schedule);
+    expect_json_type(input, JSON_ARRAY);
+
+    schedule->extra_events = memory_alloc(
+        memory,
+        sizeof(time_t) * json_array_size(input.array));
+    schedule->extra_events_size = 0;
+
+    for (Json_Array_Page *page = input.array.begin;
+         page != NULL;
+         page = page->next)
+    {
+        for (size_t page_index = 0; page_index < page->size; ++page_index) {
+            schedule->extra_events[++schedule->extra_events_size] =
+                json_as_event(memory, page->elements[page_index]);
+        }
+    }
+}
+
 struct Schedule json_as_schedule(Memory *memory, Json_Value input)
 {
     assert(memory);
@@ -215,9 +215,9 @@ struct Schedule json_as_schedule(Memory *memory, Json_Value input)
             if (string_equal(page->elements[page_index].key, SLT("projects"))) {
                 parse_schedule_projects(memory, page->elements[page_index].value, &schedule);
             } else if (string_equal(page->elements[page_index].key, SLT("cancelledEvents"))) {
-                // TODO(#47): cancelledEvents deserialization is not implemented
+                parse_schedule_cancelled_events(memory, page->elements[page_index].value, &schedule);
             } else if (string_equal(page->elements[page_index].key, SLT("extraEvents"))) {
-                // TODO(#48): extraEvents deserialization is not implemented
+                parse_schedule_extra_events(memory, page->elements[page_index].value, &schedule);
             } else if (string_equal(page->elements[page_index].key, SLT("timezone"))) {
                 expect_json_type(page->elements[page_index].value, JSON_STRING);
                 schedule.timezone = string_as_cstr(
