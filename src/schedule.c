@@ -199,6 +199,30 @@ void parse_schedule_projects(Memory *memory, Json_Value input, struct Schedule *
     }
 }
 
+static
+void parse_schedule_cancelled_events(Memory *memory, Json_Value input, struct Schedule *schedule)
+{
+    assert(memory);
+    assert(schedule);
+    expect_json_type(input, JSON_ARRAY);
+
+    schedule->cancelled_events = memory_alloc(
+        memory,
+        sizeof(time_t) * json_array_size(input.array));
+    schedule->cancelled_events_count = 0;
+
+    for (Json_Array_Page *page = input.array.begin;
+         page != NULL;
+         page = page->next)
+    {
+        for (size_t page_index = 0; page_index < page->size; ++page_index) {
+            expect_json_type(page->elements[page_index], JSON_NUMBER);
+            schedule->cancelled_events[schedule->cancelled_events_count++] =
+                json_number_to_integer(page->elements[page_index].number);
+        }
+    }
+}
+
 struct Schedule json_as_schedule(Memory *memory, Json_Value input)
 {
     assert(memory);
@@ -215,7 +239,7 @@ struct Schedule json_as_schedule(Memory *memory, Json_Value input)
             if (string_equal(page->elements[page_index].key, SLT("projects"))) {
                 parse_schedule_projects(memory, page->elements[page_index].value, &schedule);
             } else if (string_equal(page->elements[page_index].key, SLT("cancelledEvents"))) {
-                // TODO(#47): cancelledEvents deserialization is not implemented
+                parse_schedule_cancelled_events(memory, page->elements[page_index].value, &schedule);
             } else if (string_equal(page->elements[page_index].key, SLT("extraEvents"))) {
                 // TODO(#48): extraEvents deserialization is not implemented
             } else if (string_equal(page->elements[page_index].key, SLT("timezone"))) {
