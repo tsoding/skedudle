@@ -125,14 +125,10 @@ Json_Value event_as_json(Memory *memory, struct Event event)
 
     Json_Object object = {0};
 
-    json_object_push(memory, &object, SLT("id"),
-                     json_string(cstr_as_string(id_cstr)));
-    json_object_push(memory, &object, SLT("title"),
-                     json_string(cstr_as_string(event.title)));
-    json_object_push(memory, &object, SLT("description"),
-                     json_string(cstr_as_string(event.description)));
-    json_object_push(memory, &object, SLT("url"),
-                     json_string(cstr_as_string(event.url)));
+    json_object_push(memory, &object, SLT("id"), json_string(cstr_as_string(id_cstr)));
+    json_object_push(memory, &object, SLT("title"), json_string(event.title));
+    json_object_push(memory, &object, SLT("description"), json_string(event.description));
+    json_object_push(memory, &object, SLT("url"), json_string(event.url));
 
     return (Json_Value) {
         .type = JSON_OBJECT,
@@ -360,15 +356,15 @@ int main(int argc, char *argv[])
     struct Schedule schedule = json_as_schedule(&json_memory, result.value);
     munmap_string(input);
 
-    if (schedule.timezone == NULL) {
+    if (schedule.timezone.len == 0) {
         fprintf(stderr, "Timezone is not provided in the json file\n");
         exit(1);
     }
 
-    printf("Schedule timezone: %s\n", schedule.timezone);
+    printf("Schedule timezone: %*.s\n", (int) schedule.timezone.len, schedule.timezone.data);
 
     char schedule_timezone[256];
-    snprintf(schedule_timezone, 256, ":%s", schedule.timezone);
+    snprintf(schedule_timezone, 256, ":%*.s", (int) schedule.timezone.len, schedule.timezone.data);
     setenv("TZ", schedule_timezone, 1);
     tzset();
 

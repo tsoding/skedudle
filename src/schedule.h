@@ -9,12 +9,12 @@
 
 struct Project
 {
-    const char *name;
-    const char *description;
-    const char *url;
+    String name;
+    String description;
+    String url;
     uint8_t days;
     int time_min;
-    const char *channel;
+    String channel;
     struct tm *starts;
     struct tm *ends;
 };
@@ -23,10 +23,10 @@ struct Event
 {
     struct tm date;
     int time_min;
-    const char *title;
-    const char *description;
-    const char *url;
-    const char *channel;
+    String title;
+    String description;
+    String url;
+    String channel;
 };
 
 struct Schedule
@@ -37,7 +37,7 @@ struct Schedule
     size_t cancelled_events_count;
     struct Event *extra_events;
     size_t extra_events_size;
-    const char *timezone;
+    String timezone;
 };
 
 struct Schedule json_as_schedule(Memory *memory, Json_Value input);
