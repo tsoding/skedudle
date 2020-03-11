@@ -5,7 +5,7 @@
 
 #include "schedule.h"
 
-static
+static inline
 void expect_json_type(Json_Value value, Json_Type type)
 {
     if (value.type != type) {
@@ -15,6 +15,13 @@ void expect_json_type(Json_Value value, Json_Type type)
                 json_type_as_cstr(value.type));
         abort();
     }
+}
+
+static inline
+String unwrap_json_string(Json_Value value)
+{
+    expect_json_type(value, JSON_STRING);
+    return value.string;
 }
 
 uint8_t json_as_days(Memory *memory, Json_Value input)
@@ -54,20 +61,19 @@ uint8_t json_as_days(Memory *memory, Json_Value input)
 int json_as_time_min(Memory *memory, Json_Value input)
 {
     assert(memory);
-    expect_json_type(input, JSON_STRING);
-    const char *input_cstr = string_as_cstr(memory, input.string);
+    const char *input_cstr = string_as_cstr(memory, unwrap_json_string(input));
     struct tm tm = {0};
     strptime(input_cstr, "%H:%M", &tm);
     return tm.tm_hour * 60 + tm.tm_min;
 }
 
-struct tm *json_as_date(Memory *memory, Json_Value input)
+struct tm json_as_date(Memory *memory, Json_Value input)
 {
     assert(memory);
     expect_json_type(input, JSON_STRING);
-    const char *input_cstr = string_as_cstr(memory, input.string);
-    struct tm *tm = memory_alloc(memory, sizeof(struct tm));
-    strptime(input_cstr, "%Y-%m-%d", tm);
+    const char *input_cstr = string_as_cstr(memory, unwrap_json_string(input));
+    struct tm tm = {0};
+    strptime(input_cstr, "%Y-%m-%d", &tm);
     return tm;
 }
 
@@ -78,7 +84,8 @@ struct Project json_as_project(Memory *memory, Json_Value input)
 
     expect_json_type(input, JSON_OBJECT);
 
-    struct Project project = {0};
+    struct Project project;
+    memset(&project, 0, sizeof(project));
 
     for (Json_Object_Page *page = input.object.begin;
          page != NULL;
@@ -86,33 +93,25 @@ struct Project json_as_project(Memory *memory, Json_Value input)
     {
         for (size_t page_index = 0; page_index < page->size; ++page_index) {
             if (string_equal(page->elements[page_index].key, SLT("name"))) {
-                expect_json_type(page->elements[page_index].value, JSON_STRING);
-                project.name = string_as_cstr(
-                    memory,
-                    page->elements[page_index].value.string);
+                project.name = unwrap_json_string(page->elements[page_index].value);
             } else if (string_equal(page->elements[page_index].key, SLT("description"))) {
-                expect_json_type(page->elements[page_index].value, JSON_STRING);
-                project.description = string_as_cstr(
-                    memory,
-                    page->elements[page_index].value.string);
+                project.description = unwrap_json_string(page->elements[page_index].value);
             } else if (string_equal(page->elements[page_index].key, SLT("url"))) {
-                expect_json_type(page->elements[page_index].value, JSON_STRING);
-                project.url = string_as_cstr(
-                    memory,
-                    page->elements[page_index].value.string);
+                project.url = unwrap_json_string(page->elements[page_index].value);
             } else if (string_equal(page->elements[page_index].key, SLT("days"))) {
                 project.days = json_as_days(memory, page->elements[page_index].value);
             } else if (string_equal(page->elements[page_index].key, SLT("time"))) {
                 project.time_min = json_as_time_min(memory, page->elements[page_index].value);
             } else if (string_equal(page->elements[page_index].key, SLT("channel"))) {
-                expect_json_type(page->elements[page_index].value, JSON_STRING);
-                project.channel = string_as_cstr(
-                    memory,
-                    page->elements[page_index].value.string);
+                project.channel = unwrap_json_string(page->elements[page_index].value);
             } else if (string_equal(page->elements[page_index].key, SLT("starts"))) {
-                project.starts = json_as_date(memory, page->elements[page_index].value);
+                project.starts = memory_alloc(memory, sizeof(*project.starts));
+                memset(project.starts, 0, sizeof(*project.starts));
+                *project.starts = json_as_date(memory, page->elements[page_index].value);
             } else if (string_equal(page->elements[page_index].key, SLT("ends"))) {
-                project.ends = json_as_date(memory, page->elements[page_index].value);
+                project.ends = memory_alloc(memory, sizeof(*project.ends));
+                memset(project.ends, 0, sizeof(*project.ends));
+                *project.ends = json_as_date(memory, page->elements[page_index].value);
             }
         }
     }
@@ -127,9 +126,12 @@ void parse_schedule_projects(Memory *memory, Json_Value input, struct Schedule *
     assert(schedule);
 
     expect_json_type(input, JSON_ARRAY);
-    schedule->projects = memory_alloc(
-        memory,
-        sizeof(struct Project) * json_array_size(input.array));
+
+    const size_t array_size = json_array_size(input.array);
+    const size_t memory_size = sizeof(schedule->projects[0]) * array_size;
+
+    schedule->projects = memory_alloc(memory, memory_size);
+    memset(schedule->projects, 0, memory_size);
     schedule->projects_size = 0;
 
     for (Json_Array_Page *page = input.array.begin;
@@ -150,9 +152,11 @@ void parse_schedule_cancelled_events(Memory *memory, Json_Value input, struct Sc
     assert(schedule);
     expect_json_type(input, JSON_ARRAY);
 
-    schedule->cancelled_events = memory_alloc(
-        memory,
-        sizeof(time_t) * json_array_size(input.array));
+    const size_t array_size = json_array_size(input.array);
+    const size_t memory_size = sizeof(schedule->cancelled_events[0]) * array_size;
+
+    schedule->cancelled_events = memory_alloc(memory, memory_size);
+    memset(schedule->cancelled_events, 0, memory_size);
     schedule->cancelled_events_count = 0;
 
     for (Json_Array_Page *page = input.array.begin;
@@ -171,9 +175,32 @@ static
 struct Event json_as_event(Memory *memory, Json_Value input)
 {
     assert(memory);
-    (void) input;
-    assert(!"TODO(#51): json_as_event is not implemented");
-    return (struct Event) {0};
+    expect_json_type(input, JSON_OBJECT);
+
+    struct Event event = {0};
+
+    for (Json_Object_Page *page = input.object.begin;
+         page != NULL;
+         page = page->next)
+    {
+        for (size_t page_index = 0; page_index < page->size; ++page_index) {
+            if (string_equal(page->elements[page_index].key, SLT("date"))) {
+                event.date = json_as_date(memory, page->elements[page_index].value);
+            } else if (string_equal(page->elements[page_index].key, SLT("time"))) {
+                event.time_min = json_as_time_min(memory, page->elements[page_index].value);
+            } else if (string_equal(page->elements[page_index].key, SLT("title"))) {
+                event.title = unwrap_json_string(page->elements[page_index].value);
+            } else if (string_equal(page->elements[page_index].key, SLT("description"))) {
+                event.description = unwrap_json_string(page->elements[page_index].value);
+            } else if (string_equal(page->elements[page_index].key, SLT("url"))) {
+                event.url = unwrap_json_string(page->elements[page_index].value);
+            } else if (string_equal(page->elements[page_index].key, SLT("channel"))) {
+                event.channel = unwrap_json_string(page->elements[page_index].value);
+            }
+        }
+    }
+
+    return event;
 }
 
 static
@@ -183,9 +210,11 @@ void parse_schedule_extra_events(Memory *memory, Json_Value input, struct Schedu
     assert(schedule);
     expect_json_type(input, JSON_ARRAY);
 
-    schedule->extra_events = memory_alloc(
-        memory,
-        sizeof(time_t) * json_array_size(input.array));
+    const size_t array_size = json_array_size(input.array);
+    const size_t memory_size = sizeof(schedule->extra_events[0]) * array_size;
+
+    schedule->extra_events = memory_alloc(memory, memory_size);
+    memset(schedule->extra_events, 0, memory_size);
     schedule->extra_events_size = 0;
 
     for (Json_Array_Page *page = input.array.begin;
@@ -193,7 +222,8 @@ void parse_schedule_extra_events(Memory *memory, Json_Value input, struct Schedu
          page = page->next)
     {
         for (size_t page_index = 0; page_index < page->size; ++page_index) {
-            schedule->extra_events[++schedule->extra_events_size] =
+            assert(schedule->extra_events_size < array_size);
+            schedule->extra_events[schedule->extra_events_size++] =
                 json_as_event(memory, page->elements[page_index]);
         }
     }
@@ -219,10 +249,7 @@ struct Schedule json_as_schedule(Memory *memory, Json_Value input)
             } else if (string_equal(page->elements[page_index].key, SLT("extraEvents"))) {
                 parse_schedule_extra_events(memory, page->elements[page_index].value, &schedule);
             } else if (string_equal(page->elements[page_index].key, SLT("timezone"))) {
-                expect_json_type(page->elements[page_index].value, JSON_STRING);
-                schedule.timezone = string_as_cstr(
-                    memory,
-                    page->elements[page_index].value.string);
+                schedule.timezone = unwrap_json_string(page->elements[page_index].value);
             }
         }
     }
