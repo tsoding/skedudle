@@ -17,6 +17,13 @@ void expect_json_type(Json_Value value, Json_Type type)
     }
 }
 
+static inline
+String unwrap_json_string(Json_Value value)
+{
+    expect_json_type(value, JSON_STRING);
+    return value.string;
+}
+
 uint8_t json_as_days(Memory *memory, Json_Value input)
 {
     assert(memory);
@@ -54,8 +61,7 @@ uint8_t json_as_days(Memory *memory, Json_Value input)
 int json_as_time_min(Memory *memory, Json_Value input)
 {
     assert(memory);
-    expect_json_type(input, JSON_STRING);
-    const char *input_cstr = string_as_cstr(memory, input.string);
+    const char *input_cstr = string_as_cstr(memory, unwrap_json_string(input));
     struct tm tm = {0};
     strptime(input_cstr, "%H:%M", &tm);
     return tm.tm_hour * 60 + tm.tm_min;
@@ -65,7 +71,7 @@ struct tm json_as_date(Memory *memory, Json_Value input)
 {
     assert(memory);
     expect_json_type(input, JSON_STRING);
-    const char *input_cstr = string_as_cstr(memory, input.string);
+    const char *input_cstr = string_as_cstr(memory, unwrap_json_string(input));
     struct tm tm = {0};
     strptime(input_cstr, "%Y-%m-%d", &tm);
     return tm;
@@ -87,21 +93,17 @@ struct Project json_as_project(Memory *memory, Json_Value input)
     {
         for (size_t page_index = 0; page_index < page->size; ++page_index) {
             if (string_equal(page->elements[page_index].key, SLT("name"))) {
-                expect_json_type(page->elements[page_index].value, JSON_STRING);
-                project.name = page->elements[page_index].value.string;
+                project.name = unwrap_json_string(page->elements[page_index].value);
             } else if (string_equal(page->elements[page_index].key, SLT("description"))) {
-                expect_json_type(page->elements[page_index].value, JSON_STRING);
-                project.description = page->elements[page_index].value.string;
+                project.description = unwrap_json_string(page->elements[page_index].value);
             } else if (string_equal(page->elements[page_index].key, SLT("url"))) {
-                expect_json_type(page->elements[page_index].value, JSON_STRING);
-                project.url = page->elements[page_index].value.string;
+                project.url = unwrap_json_string(page->elements[page_index].value);
             } else if (string_equal(page->elements[page_index].key, SLT("days"))) {
                 project.days = json_as_days(memory, page->elements[page_index].value);
             } else if (string_equal(page->elements[page_index].key, SLT("time"))) {
                 project.time_min = json_as_time_min(memory, page->elements[page_index].value);
             } else if (string_equal(page->elements[page_index].key, SLT("channel"))) {
-                expect_json_type(page->elements[page_index].value, JSON_STRING);
-                project.channel = page->elements[page_index].value.string;
+                project.channel = unwrap_json_string(page->elements[page_index].value);
             } else if (string_equal(page->elements[page_index].key, SLT("starts"))) {
                 project.starts = memory_alloc(memory, sizeof(*project.starts));
                 memset(project.starts, 0, sizeof(*project.starts));
@@ -187,17 +189,13 @@ struct Event json_as_event(Memory *memory, Json_Value input)
             } else if (string_equal(page->elements[page_index].key, SLT("time"))) {
                 event.time_min = json_as_time_min(memory, page->elements[page_index].value);
             } else if (string_equal(page->elements[page_index].key, SLT("title"))) {
-                expect_json_type(page->elements[page_index].value, JSON_STRING);
-                event.title = page->elements[page_index].value.string;
+                event.title = unwrap_json_string(page->elements[page_index].value);
             } else if (string_equal(page->elements[page_index].key, SLT("description"))) {
-                expect_json_type(page->elements[page_index].value, JSON_STRING);
-                event.description = page->elements[page_index].value.string;
+                event.description = unwrap_json_string(page->elements[page_index].value);
             } else if (string_equal(page->elements[page_index].key, SLT("url"))) {
-                expect_json_type(page->elements[page_index].value, JSON_STRING);
-                event.url = page->elements[page_index].value.string;
+                event.url = unwrap_json_string(page->elements[page_index].value);
             } else if (string_equal(page->elements[page_index].key, SLT("channel"))) {
-                expect_json_type(page->elements[page_index].value, JSON_STRING);
-                event.channel = page->elements[page_index].value.string;
+                event.channel = unwrap_json_string(page->elements[page_index].value);
             }
         }
     }
@@ -251,8 +249,7 @@ struct Schedule json_as_schedule(Memory *memory, Json_Value input)
             } else if (string_equal(page->elements[page_index].key, SLT("extraEvents"))) {
                 parse_schedule_extra_events(memory, page->elements[page_index].value, &schedule);
             } else if (string_equal(page->elements[page_index].key, SLT("timezone"))) {
-                expect_json_type(page->elements[page_index].value, JSON_STRING);
-                schedule.timezone = page->elements[page_index].value.string;
+                schedule.timezone = unwrap_json_string(page->elements[page_index].value);
             }
         }
     }
