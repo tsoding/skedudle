@@ -10,3 +10,7 @@ h1 {
 .entry > .title {
     font-weight: bold
 }
+
+.event {
+    margin-bottom: 1.1rem;
+}

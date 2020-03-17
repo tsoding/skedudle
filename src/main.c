@@ -250,6 +250,32 @@ int serve_rest_map(Memory *memory, int dest_fd, String host)
     return 0;
 }
 
+static
+int serve_period_streams(int fd, Memory *memory, struct Schedule *schedule)
+{
+    assert(memory);
+    assert(schedule);
+
+    Json_Array array = {0};
+
+    time_t current_time = time(NULL) - timezone;
+    for (size_t i = 0; i < 14; ++i) {
+        struct Event event;
+        if (next_event(current_time, schedule, &event)) {
+            Json_Value event_json = event_as_json(memory, event);
+            json_array_push(memory, &array, event_json);
+        }
+        current_time += 24 * 60 * 60;
+    }
+
+    response_status_line(fd, 200);
+    response_header(fd, "Content-Type", "application/json");
+    response_body_start(fd);
+    print_json_value_fd(fd, (Json_Value) { .type = JSON_ARRAY, .array = array });
+
+    return 0;
+}
+
 int handle_request(int fd, struct sockaddr_in *addr, Memory *memory, struct Schedule *schedule)
 {
     assert(addr);
@@ -310,6 +336,10 @@ int handle_request(int fd, struct sockaddr_in *addr, Memory *memory, struct Sche
 
     if (string_equal(status_line.path, SLT("/next_stream"))) {
         return serve_next_stream(fd, memory, schedule);
+    }
+
+    if (string_equal(status_line.path, SLT("/period_streams"))) {
+        return serve_period_streams(fd, memory, schedule);
     }
 
     return http_error(fd, 404, "Unknown path\n");
@@ -442,7 +472,9 @@ int main(int argc, char *argv[])
 
         assert(client_addrlen == sizeof(client_addr));
 
+        // TODO: running out of request memory should not crash the application
         handle_request(client_fd, &client_addr, &request_memory, &schedule);
+        request_memory.size = 0;
 
         err = close(client_fd);
         if (err < 0) {

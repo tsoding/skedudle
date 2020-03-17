@@ -16,13 +16,16 @@ function createEvent(json) {
     return event;
 }
 
+// TODO: front page should look like https://tsoding.org/schedule/
 (() => {
-    fetch("/next_stream")
+    fetch("/period_streams")
         .then(res => res.json())
         .then(json => {
-            document
-                .querySelector("#app")
-                .appendChild(createEvent(json));
+            for (let event in json) {
+                document
+                    .querySelector("#app")
+                    .appendChild(createEvent(json[event]));
+            }
         })
         .catch(err => {
             let app = document.querySelector("#app");
