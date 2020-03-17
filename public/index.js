@@ -16,7 +16,7 @@ function createEvent(json) {
     return event;
 }
 
-// TODO: front page should look like https://tsoding.org/schedule/
+// TODO(#55): front page should look like https://tsoding.org/schedule/
 (() => {
     fetch("/period_streams")
         .then(res => res.json())
