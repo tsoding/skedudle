@@ -231,14 +231,18 @@ int serve_next_stream(int dest_fd, Memory *memory, struct Schedule *schedule)
     return 0;
 }
 
-int serve_rest_map(int dest_fd, String host)
+int serve_rest_map(Memory *memory, int dest_fd, String host)
 {
-    (void) dest_fd;
-    (void) host;
-    assert(!"TODO(#43): serve_rest_map is not implemented");
-    // {
-    //     "next_stream":  "%PROTOCOL%://%HOST%/next_stream"
-    // }
+    assert(memory);
+
+    Json_Object rest_map = {0};
+    json_object_push(
+        memory, &rest_map,
+        SLT("next_stream"),
+        json_string(concat3(memory, SLT("http://"), host, SLT("/next_stream"))));
+
+    print_json_value_fd(dest_fd, (Json_Value) { .type = JSON_OBJECT, .object = rest_map });
+
     return 0;
 }
 
@@ -278,7 +282,7 @@ int handle_request(int fd, struct sockaddr_in *addr, Memory *memory, struct Sche
     }
 
     if (string_equal(status_line.path, SLT("/"))) {
-        return serve_rest_map(fd, host);
+        return serve_rest_map(memory, fd, host);
     }
 
     if (string_equal(status_line.path, SLT("/favicon.png"))) {
