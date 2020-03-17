@@ -170,4 +170,15 @@ void chop(String *s, size_t n)
     *s = drop(*s, n);
 }
 
+static inline
+String concat3(Memory *memory, String a, String b, String c)
+{
+    const size_t n = a.len + b.len + c.len;
+    char *buffer = memory_alloc(memory, n);
+    memcpy(buffer, a.data, a.len);
+    memcpy(buffer + a.len, b.data, b.len);
+    memcpy(buffer + a.len + b.len, c.data, c.len);
+    return (String) { .len = n, .data = buffer };
+}
+
 #endif  // S_H_
