@@ -319,7 +319,7 @@ int handle_request(int fd, struct sockaddr_in *addr, Memory *memory, struct Sche
         header_line = trim(chop_line(&buffer));
     }
 
-    // TODO: serve static files from a specific folder instead of hardcoding routes
+    // TODO(#56): serve static files from a specific folder instead of hardcoding routes
     if (string_equal(status_line.path, SLT("/"))) {
         return serve_file(fd, "./public/index.html", "text/html");
     }
