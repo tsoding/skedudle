@@ -18,17 +18,15 @@ function createEvent(json) {
 
 // TODO(#55): front page should look like https://tsoding.org/schedule/
 (() => {
+    let app = document.querySelector("#app");
     fetch("/period_streams")
         .then(res => res.json())
         .then(json => {
             for (let event in json) {
-                document
-                    .querySelector("#app")
-                    .appendChild(createEvent(json[event]));
+                app.appendChild(createEvent(json[event]));
             }
         })
         .catch(err => {
-            let app = document.querySelector("#app");
             app.innerText = "Bruh";
             console.error(err);
         });
