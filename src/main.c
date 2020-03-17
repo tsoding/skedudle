@@ -242,8 +242,16 @@ int serve_rest_map(Memory *memory, int dest_fd, String host)
     Json_Object rest_map = {0};
     json_object_push(
         memory, &rest_map,
+        SLT("rest_map"),
+        json_string(concat3(memory, SLT("http://"), host, SLT("/rest_map"))));
+    json_object_push(
+        memory, &rest_map,
         SLT("next_stream"),
         json_string(concat3(memory, SLT("http://"), host, SLT("/next_stream"))));
+    json_object_push(
+        memory, &rest_map,
+        SLT("period_streams"),
+        json_string(concat3(memory, SLT("http://"), host, SLT("/period_streams"))));
 
     print_json_value_fd(dest_fd, (Json_Value) { .type = JSON_OBJECT, .object = rest_map });
 
@@ -314,8 +322,10 @@ int handle_request(int fd, struct sockaddr_in *addr, Memory *memory, struct Sche
     // TODO: serve static files from a specific folder instead of hardcoding routes
     if (string_equal(status_line.path, SLT("/"))) {
         return serve_file(fd, "./public/index.html", "text/html");
-        // TODO: serve REST map from somewhere
-        // return serve_rest_map(memory, fd, host);
+    }
+
+    if (string_equal(status_line.path, SLT("/rest_map"))) {
+        return serve_rest_map(memory, fd, host);
     }
 
     if (string_equal(status_line.path, SLT("/favicon.png"))) {
