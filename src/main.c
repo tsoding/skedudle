@@ -482,7 +482,7 @@ int main(int argc, char *argv[])
 
         assert(client_addrlen == sizeof(client_addr));
 
-        // TODO: running out of request memory should not crash the application
+        // TODO(#57): running out of request memory should not crash the application
         handle_request(client_fd, &client_addr, &request_memory, &schedule);
         request_memory.size = 0;
 
