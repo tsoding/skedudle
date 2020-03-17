@@ -1,0 +1,16 @@
+h1 {
+    font-size: 3em;
+    margin: 1.2rem;
+}
+
+#app {
+    margin: 1.2rem;
+}
+
+.entry > .title {
+    font-weight: bold
+}
+
+.event {
+    margin-bottom: 1.1rem;
+}

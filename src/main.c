@@ -235,13 +235,51 @@ int serve_rest_map(Memory *memory, int dest_fd, String host)
 {
     assert(memory);
 
+    response_status_line(dest_fd, 200);
+    response_header(dest_fd, "Content-Type", "application/json");
+    response_body_start(dest_fd);
+
     Json_Object rest_map = {0};
+    json_object_push(
+        memory, &rest_map,
+        SLT("rest_map"),
+        json_string(concat3(memory, SLT("http://"), host, SLT("/rest_map"))));
     json_object_push(
         memory, &rest_map,
         SLT("next_stream"),
         json_string(concat3(memory, SLT("http://"), host, SLT("/next_stream"))));
+    json_object_push(
+        memory, &rest_map,
+        SLT("period_streams"),
+        json_string(concat3(memory, SLT("http://"), host, SLT("/period_streams"))));
 
     print_json_value_fd(dest_fd, (Json_Value) { .type = JSON_OBJECT, .object = rest_map });
+
+    return 0;
+}
+
+static
+int serve_period_streams(int fd, Memory *memory, struct Schedule *schedule)
+{
+    assert(memory);
+    assert(schedule);
+
+    Json_Array array = {0};
+
+    time_t current_time = time(NULL) - timezone;
+    for (size_t i = 0; i < 14; ++i) {
+        struct Event event;
+        if (next_event(current_time, schedule, &event)) {
+            Json_Value event_json = event_as_json(memory, event);
+            json_array_push(memory, &array, event_json);
+        }
+        current_time += 24 * 60 * 60;
+    }
+
+    response_status_line(fd, 200);
+    response_header(fd, "Content-Type", "application/json");
+    response_body_start(fd);
+    print_json_value_fd(fd, (Json_Value) { .type = JSON_ARRAY, .array = array });
 
     return 0;
 }
@@ -281,16 +319,37 @@ int handle_request(int fd, struct sockaddr_in *addr, Memory *memory, struct Sche
         header_line = trim(chop_line(&buffer));
     }
 
+    // TODO(#56): serve static files from a specific folder instead of hardcoding routes
     if (string_equal(status_line.path, SLT("/"))) {
+        return serve_file(fd, "./public/index.html", "text/html");
+    }
+
+    if (string_equal(status_line.path, SLT("/rest_map"))) {
         return serve_rest_map(memory, fd, host);
     }
 
     if (string_equal(status_line.path, SLT("/favicon.png"))) {
-        return serve_file(fd, "./favicon.png", "image/png");
+        return serve_file(fd, "./public/favicon.png", "image/png");
+    }
+
+    if (string_equal(status_line.path, SLT("/index.js"))) {
+        return serve_file(fd, "./public/index.js", "application/javascript");
+    }
+
+    if (string_equal(status_line.path, SLT("/reset.css"))) {
+        return serve_file(fd, "./public/reset.css", "text/css");
+    }
+
+    if (string_equal(status_line.path, SLT("/main.css"))) {
+        return serve_file(fd, "./public/main.css", "text/css");
     }
 
     if (string_equal(status_line.path, SLT("/next_stream"))) {
         return serve_next_stream(fd, memory, schedule);
+    }
+
+    if (string_equal(status_line.path, SLT("/period_streams"))) {
+        return serve_period_streams(fd, memory, schedule);
     }
 
     return http_error(fd, 404, "Unknown path\n");
@@ -423,7 +482,9 @@ int main(int argc, char *argv[])
 
         assert(client_addrlen == sizeof(client_addr));
 
+        // TODO(#57): running out of request memory should not crash the application
         handle_request(client_fd, &client_addr, &request_memory, &schedule);
+        request_memory.size = 0;
 
         err = close(client_fd);
         if (err < 0) {
