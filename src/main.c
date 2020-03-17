@@ -235,6 +235,10 @@ int serve_rest_map(Memory *memory, int dest_fd, String host)
 {
     assert(memory);
 
+    response_status_line(dest_fd, 200);
+    response_header(dest_fd, "Content-Type", "application/json");
+    response_body_start(dest_fd);
+
     Json_Object rest_map = {0};
     json_object_push(
         memory, &rest_map,
@@ -281,12 +285,27 @@ int handle_request(int fd, struct sockaddr_in *addr, Memory *memory, struct Sche
         header_line = trim(chop_line(&buffer));
     }
 
+    // TODO: serve static files from a specific folder instead of hardcoding routes
     if (string_equal(status_line.path, SLT("/"))) {
-        return serve_rest_map(memory, fd, host);
+        return serve_file(fd, "./public/index.html", "text/html");
+        // TODO: serve REST map from somewhere
+        // return serve_rest_map(memory, fd, host);
     }
 
     if (string_equal(status_line.path, SLT("/favicon.png"))) {
-        return serve_file(fd, "./favicon.png", "image/png");
+        return serve_file(fd, "./public/favicon.png", "image/png");
+    }
+
+    if (string_equal(status_line.path, SLT("/index.js"))) {
+        return serve_file(fd, "./public/index.js", "application/javascript");
+    }
+
+    if (string_equal(status_line.path, SLT("/reset.css"))) {
+        return serve_file(fd, "./public/reset.css", "text/css");
+    }
+
+    if (string_equal(status_line.path, SLT("/main.css"))) {
+        return serve_file(fd, "./public/main.css", "text/css");
     }
 
     if (string_equal(status_line.path, SLT("/next_stream"))) {
