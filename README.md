@@ -18,7 +18,7 @@ This project has two goals:
 
 ```console
 $ make
-$ ./skedudle 6969
+$ ./skedudle ./schedule.json 6969
 $ <browser> http://localhost:6969
 ```
 

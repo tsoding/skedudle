@@ -7,7 +7,6 @@ json_check
 # intermediate garbage
 *_template.h
 *.o
-*.json
 
 # vim
 *.swp
