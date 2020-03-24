@@ -19,7 +19,7 @@ function createEvent(json) {
 // TODO(#55): front page should look like https://tsoding.org/schedule/
 (() => {
     let app = document.querySelector("#app");
-    fetch("/period_streams")
+    fetch("/api/period_streams")
         .then(res => res.json())
         .then(json => {
             for (let event in json) {
