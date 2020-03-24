@@ -18,6 +18,7 @@
 #include <unistd.h>
 #include <sys/mman.h>
 #include <sys/time.h>
+#include <fnmatch.h>
 
 #include "s.h"
 #include "response.h"
@@ -55,6 +56,8 @@ int serve_file(int dest_fd,
                 const char *filepath,
                 const char *content_type)
 {
+    printf("[INFO] Serving file: %s\n", filepath);
+
     int src_fd = -1;
 
     struct stat file_stat;
@@ -82,7 +85,8 @@ int serve_file(int dest_fd,
         //     - `sysctl -w net.ipv4.tcp_mem='8388608 8388608 8388608'`
         ssize_t n = sendfile(dest_fd, src_fd, &offset, 1024);
         if (n < 0) {
-            fprintf(stderr, "[ERROR] Could not finish serving the file\n");
+            fprintf(stderr, "[ERROR] Could not finish serving the file: %s\n",
+                    strerror(errno));
             break;
         }
     }
@@ -242,16 +246,12 @@ int serve_rest_map(Memory *memory, int dest_fd, String host)
     Json_Object rest_map = {0};
     json_object_push(
         memory, &rest_map,
-        SLT("rest_map"),
-        json_string(concat3(memory, SLT("http://"), host, SLT("/rest_map"))));
-    json_object_push(
-        memory, &rest_map,
         SLT("next_stream"),
-        json_string(concat3(memory, SLT("http://"), host, SLT("/next_stream"))));
+        json_string(concat3(memory, SLT("http://"), host, SLT("/api/next_stream"))));
     json_object_push(
         memory, &rest_map,
         SLT("period_streams"),
-        json_string(concat3(memory, SLT("http://"), host, SLT("/period_streams"))));
+        json_string(concat3(memory, SLT("http://"), host, SLT("/api/period_streams"))));
 
     print_json_value_fd(dest_fd, (Json_Value) { .type = JSON_OBJECT, .object = rest_map });
 
@@ -282,6 +282,19 @@ int serve_period_streams(int fd, Memory *memory, struct Schedule *schedule)
     print_json_value_fd(fd, (Json_Value) { .type = JSON_ARRAY, .array = array });
 
     return 0;
+}
+
+const char *mime_of_file_path(const char *file_path)
+{
+    if (fnmatch("*.css", file_path, 0) == 0) {
+        return "text/css";
+    } else if (fnmatch("*.js", file_path, 0) == 0) {
+        return "application/javascript";
+    } else if (fnmatch("*.html", file_path, 0) == 0) {
+        return "text/html";
+    }
+
+    return "text/plain";
 }
 
 int handle_request(int fd, struct sockaddr_in *addr, Memory *memory, struct Schedule *schedule)
@@ -320,36 +333,35 @@ int handle_request(int fd, struct sockaddr_in *addr, Memory *memory, struct Sche
     }
 
     // TODO(#56): serve static files from a specific folder instead of hardcoding routes
-    if (string_equal(status_line.path, SLT("/"))) {
+
+    String router = chop_until_char(&status_line.path, '/');
+    if (router.len != 0) {
+        return http_error(fd, 400, "Broken status line\n");
+    }
+
+    router = chop_until_char(&status_line.path, '/');
+    if (router.len == 0) {
         return serve_file(fd, "./public/index.html", "text/html");
-    }
+    } else if (string_equal(router, SLT("api"))) {
+        router = chop_until_char(&status_line.path, '/');
 
-    if (string_equal(status_line.path, SLT("/rest_map"))) {
-        return serve_rest_map(memory, fd, host);
-    }
+        if (string_equal(router, SLT(""))) {
+            return serve_rest_map(memory, fd, host);
+        }
 
-    if (string_equal(status_line.path, SLT("/favicon.png"))) {
-        return serve_file(fd, "./public/favicon.png", "image/png");
-    }
+        if (string_equal(router, SLT("next_stream"))) {
+            return serve_next_stream(fd, memory, schedule);
+        }
 
-    if (string_equal(status_line.path, SLT("/index.js"))) {
-        return serve_file(fd, "./public/index.js", "application/javascript");
-    }
-
-    if (string_equal(status_line.path, SLT("/reset.css"))) {
-        return serve_file(fd, "./public/reset.css", "text/css");
-    }
-
-    if (string_equal(status_line.path, SLT("/main.css"))) {
-        return serve_file(fd, "./public/main.css", "text/css");
-    }
-
-    if (string_equal(status_line.path, SLT("/next_stream"))) {
-        return serve_next_stream(fd, memory, schedule);
-    }
-
-    if (string_equal(status_line.path, SLT("/period_streams"))) {
-        return serve_period_streams(fd, memory, schedule);
+        if (string_equal(router, SLT("period_streams"))) {
+            return serve_period_streams(fd, memory, schedule);
+        }
+    } else if (string_equal(router, SLT("static"))) {
+        router = chop_until_char(&status_line.path, '/');
+        const char *file_path = string_as_cstr(
+            memory,
+            concat3(memory, SLT("./public/"), router, SLT("")));
+        return serve_file(fd, file_path, mime_of_file_path(file_path));
     }
 
     return http_error(fd, 404, "Unknown path\n");
