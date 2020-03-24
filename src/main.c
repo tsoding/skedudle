@@ -19,6 +19,7 @@
 #include <sys/mman.h>
 #include <sys/time.h>
 #include <fnmatch.h>
+#include <limits.h>
 
 #include "s.h"
 #include "response.h"
@@ -52,21 +53,73 @@ int http_error(int fd, int code, const char *format, ...)
     return 1;
 }
 
-int serve_file(int dest_fd,
-                const char *filepath,
-                const char *content_type)
+const char *realpath_memory(Memory *memory,
+                            const char *filepath)
+{
+    char *real_filepath = memory_alloc(memory, PATH_MAX);
+    return realpath(filepath, real_filepath);
+}
+
+const char *join_paths(Memory *memory, const char *folder, const char *file)
+{
+    // TODO: join_paths supports only Unix
+#define FILE_DELIM "/"
+#define FILE_DELIM_SIZE (sizeof(FILE_DELIM) - 1)
+    const size_t folder_size = strlen(folder);
+    const size_t file_size = strlen(file);
+    const size_t result_size = folder_size + FILE_DELIM_SIZE + file_size + 1;
+    char *result = memory_alloc(memory, result_size);
+    memcpy(result, folder, folder_size);
+    memcpy(result + folder_size, FILE_DELIM, FILE_DELIM_SIZE);
+    memcpy(result + folder_size + 1, file, file_size);
+    result[result_size - 1] = '\0';
+    return result;
+#undef FILE_DELIM
+#undef FILE_DELIM_SIZE
+}
+
+// TODO: is_prefix_of should be called different since it's away of file delimiter
+int is_prefix_of(const char *prefix, const char *cstr)
+{
+    const size_t prefix_size = strlen(prefix);
+    const size_t cstr_size = strlen(cstr);
+    return prefix_size <= cstr_size
+        && memcmp(prefix, cstr, prefix_size) == 0
+        && (prefix_size == cstr_size || cstr[prefix_size] == '/');
+}
+
+int serve_file(Memory *memory,
+               int dest_fd,
+               const char *static_folder,
+               const char *filepath,
+               const char *content_type)
 {
     printf("[INFO] Serving file: %s\n", filepath);
 
     int src_fd = -1;
 
+    const char *real_static_folder = realpath_memory(memory, static_folder);
+    if (real_static_folder == NULL) {
+        return http_error(dest_fd, 404, strerror(errno));
+    }
+
+    const char *real_filepath = realpath_memory(
+        memory, join_paths(memory, static_folder, filepath));
+    if (real_filepath == NULL) {
+        return http_error(dest_fd, 404, strerror(errno));
+    }
+
+    if (!is_prefix_of(real_static_folder, real_filepath)) {
+        return http_error(dest_fd, 404, "");
+    }
+
     struct stat file_stat;
-    int err = stat(filepath, &file_stat);
+    int err = stat(real_filepath, &file_stat);
     if (err < 0) {
         return http_error(dest_fd, 404, strerror(errno));
     }
 
-    src_fd = open(filepath, O_RDONLY);
+    src_fd = open(real_filepath, O_RDONLY);
     if (src_fd < 0) {
         return http_error(dest_fd, 404, strerror(errno));
     }
@@ -340,8 +393,12 @@ int handle_request(int fd, struct sockaddr_in *addr, Memory *memory, struct Sche
     }
 
     router = chop_until_char(&status_line.path, '/');
+
+    const char *static_folder = "./public/";
+
     if (router.len == 0) {
-        return serve_file(fd, "./public/index.html", "text/html");
+        return serve_file(memory, fd, static_folder,
+                          "index.html", "text/html");
     } else if (string_equal(router, SLT("api"))) {
         router = chop_until_char(&status_line.path, '/');
 
@@ -358,10 +415,11 @@ int handle_request(int fd, struct sockaddr_in *addr, Memory *memory, struct Sche
         }
     } else if (string_equal(router, SLT("static"))) {
         router = chop_until_char(&status_line.path, '/');
-        const char *file_path = string_as_cstr(
-            memory,
-            concat3(memory, SLT("./public/"), router, SLT("")));
-        return serve_file(fd, file_path, mime_of_file_path(file_path));
+        const char *file_path = string_as_cstr(memory, router);
+        return serve_file(memory,
+                          fd, static_folder,
+                          file_path,
+                          mime_of_file_path(file_path));
     }
 
     return http_error(fd, 404, "Unknown path\n");
