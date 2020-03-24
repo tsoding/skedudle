@@ -88,6 +88,7 @@ int is_prefix_of(const char *prefix, const char *cstr)
         && (prefix_size == cstr_size || cstr[prefix_size] == '/');
 }
 
+// TODO: explore alternative implementations of serving static files from folder
 int serve_file(Memory *memory,
                int dest_fd,
                const char *static_folder,
