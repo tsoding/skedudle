@@ -366,7 +366,7 @@ int handle_request(int fd, struct sockaddr_in *addr, Memory *memory, struct Sche
             return serve_file(fd, STATIC_FOLDER "/" filename, mime);    \
         }
 
-        // TODO: generate static file routes at compile time
+        // TODO(#60): generate static file routes at compile time
         STATIC_FILE_ROUTE("favicon.png", "image/png");
         STATIC_FILE_ROUTE("index.js", "text/javascript");
         STATIC_FILE_ROUTE("main.css", "text/css");
