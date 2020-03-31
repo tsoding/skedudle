@@ -46,16 +46,18 @@ function createEvent(json) {
         "id": "_" + json["id"]
     });
 
+    // TODO: the frontend does not display a couple of past events like the legacy app
+    // TODO: the frontend does not display the current event with embeded twitch stream
     event.appendChild(createTimestamp(json));
     event.appendChild(createTitle(json));
     event.appendChild(createCountdown(json));
     event.appendChild(createChannel(json));
+    // TODO: markdown in the description is not renderered;
     event.appendChild(createDescription(json));
 
     return event;
 }
 
-// TODO(#55): front page should look like https://tsoding.org/schedule/
 (() => {
     let app = document.querySelector("#app");
     fetch("/api/period_streams")
