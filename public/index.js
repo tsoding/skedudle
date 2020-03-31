@@ -52,7 +52,7 @@ function createEvent(json) {
     event.appendChild(createTitle(json));
     event.appendChild(createCountdown(json));
     event.appendChild(createChannel(json));
-    // TODO: markdown in the description is not renderered;
+    // TODO(#65): markdown in the description is not renderered;
     event.appendChild(createDescription(json));
 
     return event;
