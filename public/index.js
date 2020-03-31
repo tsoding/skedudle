@@ -47,7 +47,7 @@ function createEvent(json) {
     });
 
     // TODO(#63): the frontend does not display a couple of past events like the legacy app
-    // TODO: the frontend does not display the current event with embeded twitch stream
+    // TODO(#64): the frontend does not display the current event with embeded twitch stream
     event.appendChild(createTimestamp(json));
     event.appendChild(createTitle(json));
     event.appendChild(createCountdown(json));
