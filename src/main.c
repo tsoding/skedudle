@@ -134,6 +134,10 @@ Json_Value event_as_json(Memory *memory, struct Event event)
     json_object_push(memory, &object, SLT("title"), json_string(event.title));
     json_object_push(memory, &object, SLT("description"), json_string(event.description));
     json_object_push(memory, &object, SLT("url"), json_string(event.url));
+    // TODO(#66): event_as_json does not implement countdown field
+    json_object_push(memory, &object, SLT("countdown"),
+                     json_string(SLT("Countdowns are not implemented yet")));
+    json_object_push(memory, &object, SLT("channel"), json_string(event.channel));
 
     return (Json_Value) {
         .type = JSON_OBJECT,
