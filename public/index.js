@@ -1,18 +1,57 @@
-function createEntry(title, description) {
-    let entry = document.createElement("div");
-    entry.setAttribute("class", "entry");
-    entry.innerHTML =
-        `<span class="title">${title}:</span> `
-        + `<span class="value">${description}</span>`;
-    return entry;
+function createTag(name, attributes = {})
+{
+    let tag = document.createElement(name);
+    for (let [key, value] of Object.entries(attributes)) {
+        tag.setAttribute(key, value);
+    }
+    return tag;
+}
+
+function createTimestamp(json)
+{
+    let timestamp = createTag("div", {"class": "timestamp"});
+    timestamp.innerHTML = `<a href="#_${json["id"]}">${json["id"]}</a>`;
+    return timestamp;
+}
+
+function createTitle(json)
+{
+    let title = createTag("h1");
+    title.innerHTML = `<a href="${json["url"]}">${json["title"]}</a>`;
+    return title;
+}
+
+function createCountdown(json)
+{
+    let countdown = createTag("div", {"class": "countdown"});
+    countdown.innerHTML = json["countdown"];
+    return countdown;
+}
+
+function createChannel(json) {
+    let channel = createTag("div", {"class": "channel"});
+    channel.innerHTML = `<a href="${json["channel"]}">${json["channel"]}</a>`;
+    return channel;
+}
+
+function createDescription(json) {
+    let desc = createTag("div", {"class": "description markdown"});
+    desc.innerHTML = json["description"];
+    return desc;
 }
 
 function createEvent(json) {
-    let event = document.createElement("div");
-    event.setAttribute("class", "event");
-    for (let key in json) {
-        event.appendChild(createEntry(key, json[key]));
-    }
+    let event = createTag("div", {
+        "class": "event",
+        "id": "_" + json["id"]
+    });
+
+    event.appendChild(createTimestamp(json));
+    event.appendChild(createTitle(json));
+    event.appendChild(createCountdown(json));
+    event.appendChild(createChannel(json));
+    event.appendChild(createDescription(json));
+
     return event;
 }
 
