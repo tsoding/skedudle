@@ -268,14 +268,16 @@ int serve_period_streams(int fd, Memory *memory, struct Schedule *schedule)
 
     Json_Array array = {0};
 
-    time_t current_time = time(NULL) - timezone;
-    for (size_t i = 0; i < 14; ++i) {
+    const time_t SECONDS_IN_DAYS = 24 * 60 * 60;
+    const size_t DAYS_IN_PAST = 4;
+    time_t current_time = time(NULL) - timezone - SECONDS_IN_DAYS * DAYS_IN_PAST;
+    for (size_t i = 0; i < 14 + DAYS_IN_PAST; ++i) {
         struct Event event;
         if (next_event(current_time, schedule, &event)) {
             Json_Value event_json = event_as_json(memory, event);
             json_array_push(memory, &array, event_json);
         }
-        current_time += 24 * 60 * 60;
+        current_time += SECONDS_IN_DAYS;
     }
 
     response_status_line(fd, 200);

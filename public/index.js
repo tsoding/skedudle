@@ -34,10 +34,15 @@ function createTitle(json)
     return title;
 }
 
-function createCountdown(json)
+function timeDiffOfEvent(event)
+{
+    return parseInt(event["id"]) - Math.floor(Date.now() / 1000);
+}
+
+function createCountdown(event)
 {
     let countdown = createTag("div", {"class": "countdown"});
-    let diff = parseInt(json["id"]) - Math.floor(Date.now() / 1000);
+    let diff = timeDiffOfEvent(event);
 
     if (diff >= 0) {
         countdown.innerHTML = `Starts in ${humanReadableTimeDiff(diff)}`;
@@ -60,22 +65,22 @@ function createDescription(json) {
     return desc;
 }
 
-function createEvent(json) {
-    let event = createTag("div", {
-        "class": "event",
-        "id": "_" + json["id"]
+function createEvent(event) {
+    let eventTag = createTag("div", {
+        "class": timeDiffOfEvent(event) < 0 ? "event past" : "event",
+        "id": "_" + event["id"]
     });
 
     // TODO(#63): the frontend does not display a couple of past events like the legacy app
     // TODO(#64): the frontend does not display the current event with embeded twitch stream
-    event.appendChild(createTimestamp(json));
-    event.appendChild(createTitle(json));
-    event.appendChild(createCountdown(json));
-    event.appendChild(createChannel(json));
+    eventTag.appendChild(createTimestamp(event));
+    eventTag.appendChild(createTitle(event));
+    eventTag.appendChild(createCountdown(event));
+    eventTag.appendChild(createChannel(event));
     // TODO(#65): markdown in the description is not renderered;
-    event.appendChild(createDescription(json));
+    eventTag.appendChild(createDescription(event));
 
-    return event;
+    return eventTag;
 }
 
 (() => {
