@@ -38,7 +38,13 @@ function createCountdown(json)
 {
     let countdown = createTag("div", {"class": "countdown"});
     let diff = parseInt(json["id"]) - Math.floor(Date.now() / 1000);
-    countdown.innerHTML = `Starts in ${humanReadableTimeDiff(diff)}`;
+
+    if (diff >= 0) {
+        countdown.innerHTML = `Starts in ${humanReadableTimeDiff(diff)}`;
+    } else {
+        countdown.innerHTML = `Ended ${humanReadableTimeDiff(diff)} ago`;
+    }
+
     return countdown;
 }
 
