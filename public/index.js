@@ -1,9 +1,9 @@
 function humanReadableTimeDiff(diff = 0) {
     return [
-        ["day", Math.floor(diff / 60 / 60 / 24)],
-        ["hour", Math.floor(diff / 60 / 60 % 24)],
-        ["minute", Math.floor(diff / 60 % 60)],
-        ["second", Math.floor(diff % 60)]
+        ["day", Math.floor(Math.abs(diff) / 60 / 60 / 24)],
+        ["hour", Math.floor(Math.abs(diff) / 60 / 60 % 24)],
+        ["minute", Math.floor(Math.abs(diff) / 60 % 60)],
+        ["second", Math.floor(Math.abs(diff) % 60)]
     ].filter(
         ([_, value]) => value > 0
     ).map(
