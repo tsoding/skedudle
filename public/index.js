@@ -11,12 +11,13 @@ function humanReadableTimeDiff(diff = 0) {
     ).join(' ');
 }
 
-function createTag(name, attributes = {})
+function createTag(name, attributes = {}, innerText = "")
 {
     let tag = document.createElement(name);
     for (let [key, value] of Object.entries(attributes)) {
         tag.setAttribute(key, value);
     }
+    tag.innerText = innerText;
     return tag;
 }
 
@@ -65,22 +66,32 @@ function createDescription(json) {
     return desc;
 }
 
+function createDayOff() {
+    let dayOff = createTag("div", {"class": "event"});
+    dayOff.appendChild(createTag("h1", {}, "Day off"));
+    return dayOff;
+}
+
 function createEvent(event) {
-    let eventTag = createTag("div", {
-        "class": timeDiffOfEvent(event) < 0 ? "event past" : "event",
-        "id": "_" + event["id"]
-    });
+    if (event) {
+        let eventTag = createTag("div", {
+            "class": timeDiffOfEvent(event) < 0 ? "event past" : "event",
+            "id": "_" + event["id"]
+        });
 
-    // TODO(#63): the frontend does not display a couple of past events like the legacy app
-    // TODO(#64): the frontend does not display the current event with embeded twitch stream
-    eventTag.appendChild(createTimestamp(event));
-    eventTag.appendChild(createTitle(event));
-    eventTag.appendChild(createCountdown(event));
-    eventTag.appendChild(createChannel(event));
-    // TODO(#65): markdown in the description is not renderered;
-    eventTag.appendChild(createDescription(event));
+        // TODO(#63): the frontend does not display a couple of past events like the legacy app
+        // TODO(#64): the frontend does not display the current event with embeded twitch stream
+        eventTag.appendChild(createTimestamp(event));
+        eventTag.appendChild(createTitle(event));
+        eventTag.appendChild(createCountdown(event));
+        eventTag.appendChild(createChannel(event));
+        // TODO(#65): markdown in the description is not renderered;
+        eventTag.appendChild(createDescription(event));
 
-    return eventTag;
+        return eventTag;
+    }
+
+    return createDayOff();
 }
 
 (() => {

@@ -260,30 +260,119 @@ int serve_rest_map(Memory *memory, int dest_fd, String host)
     return 0;
 }
 
+int is_same_day(struct tm a, struct tm b)
+{
+    return a.tm_mday == b.tm_mday
+        && a.tm_mon  == b.tm_mon
+        && a.tm_year == b.tm_year;
+}
+
+typedef void (*EventCallback)(void *context, struct Event* event);
+
+static
+size_t events_at_day(struct tm date,
+                     struct Schedule *schedule,
+                     EventCallback event_callback,
+                     void *event_context)
+{
+    size_t result = 0;
+
+    date.tm_sec = 0;
+    date.tm_min = 0;
+    date.tm_hour = 0;
+
+    for (size_t i = 0; i < schedule->extra_events_size; ++i) {
+        if (is_same_day(date, schedule->extra_events[i].date)) {
+            result += 1;
+            event_callback(event_context, &schedule->extra_events[i]);
+        }
+    }
+
+    time_t date_time = timegm(&date) - timezone;
+
+    for (size_t i = 0; i < schedule->projects_size; ++i) {
+        if (!(schedule->projects[i].days & (1 << date.tm_wday))) {
+            continue;
+        }
+
+        if (schedule->projects[i].starts) {
+            time_t starts_time = timegm(schedule->projects[i].starts) - timezone;
+            if (date_time < starts_time) continue;
+        }
+
+        if (schedule->projects[i].ends) {
+            time_t ends_time = timegm(schedule->projects[i].ends) - timezone;
+            if (ends_time < date_time) continue;
+        }
+
+        struct Event event = {
+            .time_min = schedule->projects[i].time_min,
+            .title = schedule->projects[i].name,
+            .description = schedule->projects[i].description,
+            .url = schedule->projects[i].url,
+            .channel = schedule->projects[i].channel
+        };
+
+        event.date = date;
+        time_t event_id = id_of_event(event);
+
+        if (is_cancelled(schedule, event_id)) {
+            continue;
+        }
+
+        result += 1;
+        event_callback(event_context, &event);
+    }
+
+    return result;
+}
+
+struct Context
+{
+    Json_Array array;
+    Memory *memory;
+};
+
+void append_event_to_context(struct Context *context, struct Event *event)
+{
+    Json_Value value = event_as_json(context->memory, *event);
+    json_array_push(context->memory, &context->array, value);
+}
+
 static
 int serve_period_streams(int fd, Memory *memory, struct Schedule *schedule)
 {
     assert(memory);
     assert(schedule);
 
-    Json_Array array = {0};
+    struct Context context = {
+        .array = {0},
+        .memory = memory
+    };
 
     const time_t SECONDS_IN_DAYS = 24 * 60 * 60;
     const size_t DAYS_IN_PAST = 4;
     time_t current_time = time(NULL) - timezone - SECONDS_IN_DAYS * DAYS_IN_PAST;
     for (size_t i = 0; i < 14 + DAYS_IN_PAST; ++i) {
-        struct Event event;
-        if (next_event(current_time, schedule, &event)) {
-            Json_Value event_json = event_as_json(memory, event);
-            json_array_push(memory, &array, event_json);
+        struct tm *current_date = gmtime(&current_time);
+
+        size_t count = events_at_day(*current_date,
+                                     schedule,
+                                     (EventCallback)append_event_to_context,
+                                     &context);
+
+        if (count == 0) {
+            // TODO: Day off cell does not have a date attached to it
+            json_array_push(context.memory, &context.array, json_null);
         }
+
         current_time += SECONDS_IN_DAYS;
     }
 
     response_status_line(fd, 200);
     response_header(fd, "Content-Type", "application/json");
     response_body_start(fd);
-    print_json_value_fd(fd, (Json_Value) { .type = JSON_ARRAY, .array = array });
+    print_json_value_fd(fd, (Json_Value) { .type = JSON_ARRAY, .array = context.array });
 
     return 0;
 }
