@@ -1,3 +1,16 @@
+function humanReadableTimeDiff(diff = 0) {
+    return [
+        ["day", Math.floor(diff / 60 / 60 / 24)],
+        ["hour", Math.floor(diff / 60 / 60 % 24)],
+        ["minute", Math.floor(diff / 60 % 60)],
+        ["second", Math.floor(diff % 60)]
+    ].filter(
+        ([_, value]) => value > 0
+    ).map(
+        ([name, value]) => `${value} ${value == 1 ? name : name + "s"}`
+    ).join(' ');
+}
+
 function createTag(name, attributes = {})
 {
     let tag = document.createElement(name);
@@ -24,7 +37,8 @@ function createTitle(json)
 function createCountdown(json)
 {
     let countdown = createTag("div", {"class": "countdown"});
-    countdown.innerHTML = json["countdown"];
+    let diff = parseInt(json["id"]) - Math.floor(Date.now() / 1000);
+    countdown.innerHTML = `Starts in ${humanReadableTimeDiff(diff)}`;
     return countdown;
 }
 
