@@ -3,6 +3,7 @@
 
 #include <assert.h>
 #include <stdint.h>
+#include <stdalign.h>
 
 #define KILO 1024
 #define MEGA (1024 * KILO)
@@ -24,6 +25,22 @@ void *memory_alloc(Memory *memory, size_t size)
     void *result = memory->buffer + memory->size;
     memory->size += size;
 
+    return result;
+}
+
+static inline
+void *memory_alloc_aligned(Memory *memory, size_t size, size_t alignment)
+{
+    assert(memory);
+
+    uintptr_t ptr = (uintptr_t) (memory->buffer + memory->size + (alignment - 1));
+    uint8_t *result = (uint8_t *) (ptr & ~alignment);
+
+    // since result and buffer are uint8_t*, this gives us bytes.
+    size_t real_size = (result + size) - (memory->buffer + memory->size);
+    assert(memory->size + real_size <= memory->capacity);
+
+    memory->size += real_size;
     return result;
 }
 

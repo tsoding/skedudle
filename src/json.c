@@ -42,13 +42,13 @@ void json_array_push(Memory *memory, Json_Array *array, Json_Value value)
 
     if (array->begin == NULL) {
         assert(array->end == NULL);
-        array->begin = memory_alloc(memory, sizeof(Json_Array_Page));
+        array->begin = memory_alloc_aligned(memory, sizeof(Json_Array_Page), alignof(Json_Array_Page));
         array->end = array->begin;
         memset(array->begin, 0, sizeof(Json_Array_Page));
     }
 
     if (array->end->size >= JSON_ARRAY_PAGE_CAPACITY) {
-        Json_Array_Page *next = memory_alloc(memory, sizeof(Json_Array_Page));
+        Json_Array_Page *next = memory_alloc_aligned(memory, sizeof(Json_Array_Page), alignof(Json_Array_Page));
         memset(next, 0, sizeof(Json_Array_Page));
         array->end->next = next;
         array->end = next;
@@ -66,13 +66,13 @@ void json_object_push(Memory *memory, Json_Object *object, String key, Json_Valu
 
     if (object->begin == NULL) {
         assert(object->end == NULL);
-        object->begin = memory_alloc(memory, sizeof(Json_Object_Page));
+        object->begin = memory_alloc_aligned(memory, sizeof(Json_Object_Page), alignof(Json_Object_Page));
         object->end = object->begin;
         memset(object->begin, 0, sizeof(Json_Object_Page));
     }
 
     if (object->end->size >= JSON_OBJECT_PAGE_CAPACITY) {
-        Json_Object_Page *next = memory_alloc(memory, sizeof(Json_Object_Page));
+        Json_Object_Page *next = memory_alloc_aligned(memory, sizeof(Json_Object_Page), alignof(Json_Object_Page));
         memset(next, 0, sizeof(Json_Object_Page));
         object->end->next = next;
         object->end = next;
