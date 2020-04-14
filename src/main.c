@@ -11,7 +11,7 @@
 #include <arpa/inet.h>
 #include <fcntl.h>
 #include <netinet/in.h>
-// #include <sys/sendfile.h>
+#include <sys/sendfile.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -84,7 +84,7 @@ int serve_file(int dest_fd,
         //     References:
         //     - http://man7.org/linux/man-pages/man2/sysctl.2.html
         //     - `sysctl -w net.ipv4.tcp_mem='8388608 8388608 8388608'`
-        ssize_t n = 0; //sendfile(dest_fd, src_fd, &offset, 1024);
+        ssize_t n = sendfile(dest_fd, src_fd, &offset, 1024);
         if (n < 0) {
             fprintf(stderr, "[ERROR] Could not finish serving the file: %s\n",
                     strerror(errno));
