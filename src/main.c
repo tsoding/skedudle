@@ -488,7 +488,7 @@ String mmap_file_to_string(const char *filepath)
     String result;
     result.len = fd_stat.st_size;
     result.data = mmap(NULL, result.len, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 0);
-    assert(result.data);
+    assert(result.data != MAP_FAILED);
     close(fd);
 
     return result;
