@@ -33,8 +33,12 @@ void *memory_alloc_aligned(Memory *memory, size_t size, size_t alignment)
 {
     assert(memory);
 
+    // this gets aligns the address *upwards*, to the next alignment.
+    // the assumption here is that 'alignment' is a power of two.
+    assert((alignment & (alignment - 1)) == 0);
+
     uintptr_t ptr = (uintptr_t) (memory->buffer + memory->size + (alignment - 1));
-    uint8_t *result = (uint8_t *) (ptr & ~alignment);
+    uint8_t *result = (uint8_t *) (ptr & ~(alignment - 1));
 
     // since result and buffer are uint8_t*, this gives us bytes.
     size_t real_size = (result + size) - (memory->buffer + memory->size);
