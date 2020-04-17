@@ -1,6 +1,6 @@
 CFLAGS=-Wall -Wextra -Wno-unused-result -pedantic -std=c11 -ggdb
 CS=src/main.c src/schedule.c src/json.c src/utf8.c
-HS=src/s.h src/request.h src/response.h src/error_page_template.h src/schedule.h src/json.h
+HS=src/s.h src/request.h src/response.h src/error_page_template.h src/schedule.h src/json.h src/platform_specific.h
 LIBS=-lm
 
 all: skedudle json_test json_check
