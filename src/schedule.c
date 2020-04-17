@@ -105,11 +105,11 @@ struct Project json_as_project(Memory *memory, Json_Value input)
             } else if (string_equal(page->elements[page_index].key, SLT("channel"))) {
                 project.channel = unwrap_json_string(page->elements[page_index].value);
             } else if (string_equal(page->elements[page_index].key, SLT("starts"))) {
-                project.starts = memory_alloc(memory, sizeof(*project.starts));
+                project.starts = memory_alloc_aligned(memory, sizeof(*project.starts), alignof(struct tm));
                 memset(project.starts, 0, sizeof(*project.starts));
                 *project.starts = json_as_date(memory, page->elements[page_index].value);
             } else if (string_equal(page->elements[page_index].key, SLT("ends"))) {
-                project.ends = memory_alloc(memory, sizeof(*project.ends));
+                project.ends = memory_alloc_aligned(memory, sizeof(*project.ends), alignof(struct tm));
                 memset(project.ends, 0, sizeof(*project.ends));
                 *project.ends = json_as_date(memory, page->elements[page_index].value);
             }
@@ -130,7 +130,7 @@ void parse_schedule_projects(Memory *memory, Json_Value input, struct Schedule *
     const size_t array_size = json_array_size(input.array);
     const size_t memory_size = sizeof(schedule->projects[0]) * array_size;
 
-    schedule->projects = memory_alloc(memory, memory_size);
+    schedule->projects = memory_alloc_aligned(memory, memory_size, alignof(struct Project));
     memset(schedule->projects, 0, memory_size);
     schedule->projects_size = 0;
 
@@ -155,7 +155,7 @@ void parse_schedule_cancelled_events(Memory *memory, Json_Value input, struct Sc
     const size_t array_size = json_array_size(input.array);
     const size_t memory_size = sizeof(schedule->cancelled_events[0]) * array_size;
 
-    schedule->cancelled_events = memory_alloc(memory, memory_size);
+    schedule->cancelled_events = memory_alloc_aligned(memory, memory_size, alignof(time_t));
     memset(schedule->cancelled_events, 0, memory_size);
     schedule->cancelled_events_count = 0;
 
@@ -213,7 +213,7 @@ void parse_schedule_extra_events(Memory *memory, Json_Value input, struct Schedu
     const size_t array_size = json_array_size(input.array);
     const size_t memory_size = sizeof(schedule->extra_events[0]) * array_size;
 
-    schedule->extra_events = memory_alloc(memory, memory_size);
+    schedule->extra_events = memory_alloc_aligned(memory, memory_size, alignof(struct Event));
     memset(schedule->extra_events, 0, memory_size);
     schedule->extra_events_size = 0;
 
